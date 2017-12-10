@@ -1,0 +1,134 @@
+<?php 
+/**
+ * Implements hook_apachesolr_modify_query
+ */
+function toolkits_search_block_apachesolr_query_alter($query) {
+  $uri = $_SERVER['REQUEST_URI'];
+  $args = explode('/', ltrim($uri, '/'));
+  $toolkit_filter = '';
+  $toolkits_filter = FALSE;
+
+  // We'll check both arg() and the request uri, just in case
+  if (arg(0) == 'search') {
+    $toolkit_filter = (arg(1) == 'toolkit') ? arg(2) : '';
+    $toolkits_filter = (arg(1) == 'toolkits') ? TRUE : FALSE;
+  }
+  elseif ($args[0] == 'search') {
+    $toolkit_filter = ($args[1] == 'toolkit') ? $args[2] : '';
+    $toolkits_filter = ($args[1] == 'toolkits') ? TRUE : FALSE;
+  }
+
+  // Add a query filter for a toolkit-specific search
+  if (!empty($toolkit_filter)) {
+    $query->addFilter('path_alias', 'toolkits/'. $toolkit_filter);
+  }
+
+  // Add a query filter for an all toolkits search
+  if ($toolkits_filter === TRUE) {
+    $query->addFilter('path_alias', 'toolkits');
+  }
+}
+
+/**
+ * Implements hook_preprocess_search_results.
+ *
+ * Fixing pager links for toolkit specific searches.
+ */
+function toolkits_search_block_preprocess_search_results(&$vars) {
+  $q = $_GET['q'];
+  $uri = explode('?', ltrim(request_uri(), '/'));
+  $uri = $uri[0];
+  $toolkit_path = drupal_get_path_alias($q);
+  if (strstr($uri, 'search/toolkit/')) {
+    $vars['pager'] = str_replace(array($q, $toolkit_path), $uri, $vars['pager']);
+  }
+}
+
+
+/**
+ * Implements hook_block_info()
+ */
+function toolkits_search_block_block_info() {
+  $blocks['toolkits_search_block'] = array(
+    'info' => t('Search block'),
+    'cache' => DRUPAL_NO_CACHE,
+  );
+  $blocks['toolkits_search_all_block'] = array(
+    'info' => t('Search all block'),
+    'cache' => DRUPAL_NO_CACHE,
+  );
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view()
+ */
+function toolkits_search_block_block_view($delta = '') {
+  $function_name = '_toolkits_search_block_'. $delta;
+  if (!function_exists($function_name)) { return; }
+  return $function_name();
+}
+
+/**
+ * Implements block for delta: toolkits_search_block
+ */
+function _toolkits_search_block_toolkits_search_block() {
+  
+  $page = db_query('SELECT * FROM {apachesolr_search_page} s WHERE s.search_path = :search_path', array(':search_path' => 'search/toolkit/%'))->fetchObject();
+  if ($page) {
+    // include the apachesolr module so that we can include the form
+    module_load_include('inc', 'apachesolr', 'apachesolr_search.pages');
+    $page->settings = unserialize($page->settings);
+    
+    // get the current node
+    if (arg(0) == 'node' && is_numeric(arg(1))) {
+      $node = node_load(arg(1));
+      if (isset($node->book)) {
+        $book_path = explode('/', drupal_get_path_alias('node/'. $node->book['bid']));
+        $book_path = $book_path[1];
+      }
+      else {
+        $context = og_context();
+        $book_path = explode('/', drupal_get_path_alias('node/'. $context->etid));
+        $book_path = $book_path[1];
+      }
+    }
+    
+    $search_path = 'search/toolkit/'. $book_path;
+    $page->search_path = $search_path;
+    $block['subject'] = 'Search This Toolkit';
+    
+    // get the form via the apachesolr module
+    $page = (array) $page;
+    $form = drupal_get_form('apachesolr_search_custom_page_search_form', $page);
+    $form['#action'] = '/'. $search_path;
+    // add the form
+    $block['content'] = $form;
+  }
+  
+  return $block;
+}
+
+/**
+ * Implements block for delta: toolkits_search_block
+ */
+function _toolkits_search_block_toolkits_search_all_block() {
+  
+  $page = db_query('SELECT * FROM {apachesolr_search_page} s WHERE s.search_path = :search_path', array(':search_path' => 'search/toolkits'))->fetchObject();
+  if ($page) {
+    // include the apachesolr module so that we can include the form
+    module_load_include('inc', 'apachesolr', 'apachesolr_search.pages');
+
+    $block['subject'] = '';
+
+    // get the form via the apachesolr module
+    $page = (array) $page;
+    $form = drupal_get_form('apachesolr_search_custom_page_search_form', $page);
+    
+    // add the form
+    $block['content'] = $form;
+  }
+  
+  return $block;
+} // _toolkits_search_block_toolkits_search_all_block
+

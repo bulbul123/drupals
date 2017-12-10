@@ -1,0 +1,24 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the security module.
+ */
+
+/**
+ * Implements hook_install()
+ */
+function security_experimental_install() {
+  db_update('system')
+    ->fields(array('weight' => 2147483647))
+    ->condition('name', 'security_experimental', '=')
+    ->execute();
+}
+
+/**
+ * Implements hook_uninstall()
+ */
+function security_experimental_uninstall() {
+  // Leave variable using base module name for when this feature moves to the main module
+  variable_del('security_admin_menu_path');
+}

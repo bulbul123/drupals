@@ -1,0 +1,43 @@
+//Blog Callout Feature
+
+#featured {
+  .feature-callout {
+    @include background($black-lighter image-url("bg_home-feature.jpg") 100% 0 no-repeat);
+    padding: 60px 0 60px cp(50,$width-content);
+    position: relative;
+    h2 {
+      @extend .ff-serif;
+      @include adjust-font-size-to(24px, 1.8);
+      color: $blue-lighter;
+      width: cp(350,$width-content);
+    }
+    .caption {
+      @include adjust-font-size-to(11px, 1);
+      @include text-shadow(rgba($black,.8) 0 0 1px);
+      bottom: 20px;
+      color: $white;
+      font-weight: 700;
+      opacity: 0.8;
+      position: absolute;
+      right: cp(50,$width-content);
+      text-decoration: none;
+      &:hover {
+       opacity: 1;
+      }
+    }
+    @include breakpoint($breakpoint-large, $no-query: true) {
+      padding: 326px 8px 20px cp(50,$width-content);
+      h2 {
+        width: 100%;
+      }
+    }
+    @include breakpoint($breakpoint-medium, $no-query: true) {
+      h2 {
+        @include adjust-font-size-to(20px, 1.8);
+      }
+    }
+    @include breakpoint($breakpoint-small, $no-query: true) {
+      padding-top: 318px;
+    }
+  }
+}

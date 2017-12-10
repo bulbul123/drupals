@@ -1,0 +1,4 @@
+name = Hero Statement
+description = Provides a block to display the Hero Statement
+core = 7.x
+dependencies[] = block

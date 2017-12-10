@@ -1,0 +1,202 @@
+/*
+ * jQuery FlexSlider v1.8
+ * http://www.woothemes.com/flexslider/
+ *
+ * Copyright 2012 WooThemes
+ * Free to use under the MIT license.
+ * http://www.opensource.org/licenses/mit-license.php
+ */
+
+/* Browser Resets */
+.flex-container a:active,
+.flexslider a:active,
+.flex-container a:focus,
+.flexslider a:focus  {outline: none;}
+.slides,
+.flex-control-nav,
+.flex-direction-nav {margin: 0; padding: 0; list-style: none;}
+
+/* FlexSlider Necessary Styles
+*********************************/
+.flexslider {width: 100%; margin: 0; padding: 0;}
+.flexslider .slides > li {display: none; -webkit-backface-visibility: hidden;} /* Hide the slides before the JS is loaded. Avoids image jumping */
+.flexslider .slides img {max-width: 100%; display: block;}
+.flex-pauseplay span {text-transform: capitalize;}
+
+/* Clearfix for the .slides element */
+.slides:after {content: "."; display: block; clear: both; visibility: hidden; line-height: 0; height: 0;}
+html[xmlns] .slides {display: block;}
+* html .slides {height: 1%;}
+
+/* No JavaScript Fallback */
+/* If you are not using another script, such as Modernizr, make sure you
+ * include js that eliminates this class on page load */
+.no-js .slides > li:first-child {display: block;}
+
+.flexslider {
+  position: relative;
+  @include breakpoint($breakpoint-medium, $no-query: true) {
+  }
+}
+
+.flexslider .slides {
+  li {
+    position: relative;
+    img {
+      max-height: 360px;
+      @include breakpoint($breakpoint-1120, $no-query: true) {
+        max-height: 313px;
+      }
+      @include breakpoint($breakpoint-1120, $no-query: true) {
+        max-height: 253px;
+      }
+    }
+    @include breakpoint($breakpoint-medium, $no-query: true) {
+      height: 200px;
+      img {
+        display: none !important;
+        max-height: 1px;
+      }
+    }
+    @include breakpoint($breakpoint-tiny, $no-query: true) {
+      height: 230px;
+    }
+    .caption {
+      @include border-radius(4px);
+      background-color: $white;
+      @include box-shadow(rgba($black, 0.3) 0 0 4px 1px);
+      bottom: 36px;
+      left: 36px;
+      position: absolute;
+      width: 300px;
+      @include breakpoint($breakpoint-1120, $no-query: true) {
+        bottom: 3px;
+        left: 3px;
+      }
+      @include breakpoint($breakpoint-medium, $no-query: true) {
+        position: inherit;
+        left: 0;
+        top: 0;
+        width: 100%;
+        display: block;
+        height: 100%;
+        @include border-radius(0);
+        @include box-shadow(rgba($black, 0.3) 0 0 0 0);
+      }
+    }
+    .caption-content {
+      padding: 24px;
+      //padding-bottom: 0;
+      h3 {
+        @include adjust-font-size-to(20px,1);
+        margin-bottom: 0;
+        a {
+          text-decoration: none;
+        }
+      }
+      p {
+        margin-bottom: 0;
+        margin-top: 10px;
+        @include adjust-font-size-to(15px,.7);
+      }
+      @include breakpoint($breakpoint-medium, $no-query: true) {
+        display: block;
+        padding: 18px;
+        h3 {
+          @include adjust-font-size-to(16px);
+          letter-spacing: -.5px;
+        }
+      }
+    }
+    .link-wrapper {
+      position: relative;
+      background-color: $gray-white;
+      height: 54px;
+       @include border-bottom-radius(4px);
+       .pill-large {
+         margin: 12px 0 0 24px;
+         @extend .button-more;
+       }
+       @include breakpoint($breakpoint-medium, $no-query: true) {
+        position: absolute;
+        width: 100%;
+        bottom: 0;
+        .pill-large {
+          position: absolute;
+          right: 10px;
+          bottom: 12px;
+        }
+
+      }
+    }
+  }
+}
+
+.flex-direction-nav {
+  position: absolute;
+  bottom: 51px;
+  left: 254px;
+  @include breakpoint($breakpoint-1120, $no-query: true) {
+    bottom: 16px;
+    left: 234px;
+  }
+  @include breakpoint($breakpoint-medium, $no-query: true) {
+    bottom: 16px;
+    left: 18px;
+  }
+   @include breakpoint($breakpoint-780, $no-query: true) {
+    bottom: 16px;
+    left: 18px;
+  }
+  li {
+    @include float-left;
+    margin: 0;
+    padding: 0;
+    a {
+      @include background(transparent image-url("icons_slideshow-nav.png") no-repeat 0 0);
+      @include float-left;
+      display: block;
+      height: 24px;
+      overflow: hidden;
+      text-indent: -9999em;
+      width: 24px;
+    }
+    a.prev {
+      background-position: 0 0;
+      margin-right: 7px;
+      &:hover {
+        background-position: 0 -24px;
+      }
+    }
+
+    a.next {
+      background-position: 100% 0;
+      &:hover {
+        background-position: 100% -24px;
+      }
+    }
+  }
+}
+
+//Hero statement
+#block-hero-statement-hero-statement {
+  background-color: $royal-light;
+  @include background($royal-light linear-gradient($royal-light, $royal));
+  border: solid 1px #253A66;
+  border-top: none;
+  border-right: none;
+  p {
+    @extend .ff-serif;
+    @include adjust-font-size-to(22px,1.2);
+  }
+  .hero-statement-text {
+    color: $white;
+    padding: 24px cp(24, $width-sidebar) 0 cp(24, $width-sidebar);
+    a {
+      @include link-colors($baby-blue, $white);
+      text-decoration: none;
+    }
+  }
+}
+
+

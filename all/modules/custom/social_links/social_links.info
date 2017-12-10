@@ -1,0 +1,4 @@
+name = Social Links
+description = Provides a block to display social media links
+core = 7.x
+dependencies[] = block

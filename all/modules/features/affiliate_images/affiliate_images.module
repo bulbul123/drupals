@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Affiliate Images feature.
+ */
+
+include_once('affiliate_images.features.inc');

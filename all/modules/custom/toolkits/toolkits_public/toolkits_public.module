@@ -1,0 +1,51 @@
+<?php
+
+/**
+ * Implementation of hook_node_update().
+ */
+function toolkits_public_node_update($node) {
+  // Check if toolkit group_access is being updated
+  if ($node->type == 'toolkit' && ($node->group_access[$node->language][0]['value'] != $node->original->group_access[$node->language][0]['value'])) {
+    // Get the gid for this toolkit
+    $gid = db_select('og', 'og')->fields('og', array('gid'))->condition('og.etid', $node->nid)->execute()->fetchField();
+
+    // Make sure all other nodes are public and commenting is turned off
+    $query = db_select('node', 'n')
+      ->fields('n', array('nid'));
+    $query->innerJoin('og_membership', 'om', 'n.nid = om.etid');
+    $query->condition('om.gid', $gid);
+    $result = $query->execute();
+
+    $access = 0;
+    $comment = 0;
+    foreach ($result as $record) {
+      $content_node = node_load($record->nid);
+      // Access wasn't set, so set it to default to group
+      if (empty($content_node->group_content_access)) {
+        $access++;
+        $content_node->group_content_access['und'][0]['value'] = 0;
+      // Group set to private, content set to public
+      } elseif ($content_node->group_content_access['und'][0]['value'] == 1 && $node->group_access[$node->language][0]['value'] == 1) {
+        drupal_set_message($content_node->title . ' is set to public, but the toolkit is set to private. Go to ' . l(t('node/' . $content_node->nid), 'node/' . $content_node->nid) . ' to change the content\'s visibility settings.');
+      // Group set to public, content set to private
+      } elseif ($content_node->group_content_access['und'][0]['value'] == 2 && $node->group_access[$node->language][0]['value'] == 0) {
+        drupal_set_message($content_node->title . ' is set to private, but the toolkit is set to public. Go to ' . l(t('node/' . $content_node->nid), 'node/' . $content_node->nid) . ' to change the content\'s visibility settings.');
+      }
+
+      // If it's being made public, go through and make sure all commenting is turned off
+      if ($node->group_access[$node->language][0]['value'] == 0) {
+        if ($content_node->comment != 1) {
+          $comment++;
+          $content_node->comment = 1;
+        }
+      }
+      node_save($content_node);
+
+    }
+    if ($node->group_access[$node->language][0]['value'] == 0) {
+      drupal_set_message($node->title . ' has been made public. ' . $access . ' access records were updated and commenting was turned off in ' . $comment . ' nodes');
+    } else {
+      drupal_set_message($node->title . ' has been made private.');
+    }
+  } // end check if toolkit group access is being updated
+}

@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Affiliate Hero feature.
+ */
+
+include_once('affiliate_hero.features.inc');

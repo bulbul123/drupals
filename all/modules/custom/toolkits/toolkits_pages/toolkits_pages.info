@@ -1,0 +1,6 @@
+name = Toolkits Pages
+description = Handle custom pages for toolkits (about, all resources)
+package = Toolkits
+core = 7.x
+dependencies[] = og
+dependencies[] = og_context

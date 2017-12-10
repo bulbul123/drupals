@@ -1,0 +1,103 @@
+/* Style date selector at top of og_analyitcs page */
+form#og-analytics-google-analytics-date-form .container-inline-date {
+ clear: none;
+ float: left;
+}
+
+#og-analytics-google-analytics-date-form input.ogt-analytics-submit {
+ margin-top: 2.22em;
+}
+
+#report {
+ clear: left;
+}
+
+#report .google-analytics-referrals,
+#report .google-analytics-keywords {
+ width: 47%;
+}
+
+#report .google-analytics-totals .ctools-collapsible-container .legend > li {
+ clear: left;
+}
+
+#report .google-analytics-totals .ctools-collapsible-container .legend li {
+ list-style: none;
+}
+
+#report .google-analytics-reports > div {
+ clear: left;
+}
+
+#report .google-analytics-reports > div,
+#report .clearfix > div {
+ margin-top: 2em;
+}
+
+/* Format usage table nicely */
+#report table {
+  width: 100%;
+  font-size: 0.923em;
+  margin: 0 0 10px;
+  border: 1px solid #bebfb9;
+}
+
+#report tr.odd {
+ background: white;
+}
+
+#report tr.even, #report tr.odd {
+ border-width: 0 1px 0 1px;
+ border-style: solid;
+ border-color: #BEBFB9;
+ background: #F3F4EE;
+}
+
+#report table td, #report table th {
+ padding: 8px 10px;
+}
+
+#report table th {
+ text-transform: uppercase;
+ background: #E1E2DC;
+ font-weight: normal;
+ border-width: 1px;
+ border-style: solid;
+ border-color: #BEBFB9;
+ padding: 3px 10px;
+}
+
+#report tr.odd {
+ background: white;
+}
+
+.report-hidden {
+  display: none;
+}
+
+.more-less a.adjust {
+  padding: 10px;
+  display: block;
+  font-weight: bold;
+  background: #eee;
+  color: #333;
+  border-radius: 12px;
+  -webkit-border-radius: 12px;
+  -moz-border-radius: 12px;
+  width: 80px;
+  text-align: center;
+  text-decoration: none;
+}
+
+#report .more-block table tr.even {
+  background-color: #e1e2dc;
+}
+
+.more-block table td, .more-block table th {
+  vertical-align: top;
+  text-align: left;
+}
+
+.ctools-collapsible-content {
+  display: none;
+}

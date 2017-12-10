@@ -1,0 +1,50 @@
+<?php
+/**
+* Implements hook_element_info_alter().
+*
+* Sets the text format processor to a custom callback function.
+* This code is taken from the Better Formats module.
+*/
+
+function k4h_comment_input_filter_element_info_alter(&$type) {
+  
+
+  if (isset($type['text_format']['#process'])) {
+    foreach ($type['text_format']['#process'] as &$callback) {
+      if ($callback === 'filter_process_format') {
+        $callback = 'k4h_comment_input_filter_filter_process_format';
+      }
+    }
+  }
+
+}
+
+/**
+* Callback for MODULENAME_element_info_alter().
+*/
+
+function k4h_comment_input_filter_filter_process_format($element) {
+
+  $element = filter_process_format($element);
+
+  // Change input format to "Filtered HTML" for comment fields
+  if ($element['#field_name'] == 'comment_body') {
+    $element['#format'] = 'filtered_html';
+    $element['format']['format']['#default_value'] = 'filtered_html';
+    $element['format']['format']['#options'] = array( 1 => 'Filtered HTML');
+    unset($element['format']['help']);
+    $element['format']['format']['#access'] = FALSE;
+
+    foreach (element_children($element['format']['guidelines']) as $format) {
+
+      if ($format != 'filtered_html') {
+        unset($element['format']['guidelines'][$format]);
+      } // if
+
+    } // foreach
+
+  }
+
+  return $element;
+
+}

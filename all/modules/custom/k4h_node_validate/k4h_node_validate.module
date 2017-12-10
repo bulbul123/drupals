@@ -1,0 +1,29 @@
+<?php
+
+/**
+ * Implements hook_node_validate().
+ */
+function k4h_node_validate_node_validate($node, $form, &$form_state) {
+//dpr($node);
+//exit();
+  if (isset($node->body[$node->language][0]['value'])) {
+    // Check first for a binary image dump
+    if (strstr($node->body[$node->language][0]['value'], 'src="data:image')) {
+      form_set_error('image_dump', 'It looks like you directly pasted an image into the content. Please save the image and add it by clicking on the add image or add media icon in the editor bar.');
+    }
+
+    // Make sure no one pastes in a link from their email
+    if (strstr($node->body[$node->language][0]['value'], 'mail.jhsph.edu')) {
+      form_set_error('content', 'Invalid link: It looks like you pasted a link from an email into the content. Please click on that link in your email, then copy and paste the link that your browser displays into the content instead.');
+    }
+  }
+
+  // Provide a more useful error message for external resource URLs missing http prefix
+  if ($node->type == 'toolkit_resource' && !empty($node->field_toolkit_external_links[$node->language][0]['url'])) {
+    foreach ($node->field_toolkit_external_links[$node->language] as $id => $link) {
+      if (is_numeric($id) && !strstr($link['url'], 'http') && !empty($link['url'])) {
+        form_set_error('field_toolkit_external_links[' . $node->language . '][' . $id . ']', t('Error adding external resource link for %url. You need to include the "http://" prefix for the URL.', array('%url' => $link['url'])));
+      }
+    }
+  }
+}

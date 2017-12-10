@@ -1,0 +1,6 @@
+name = Toolkits Resource Pages
+description = Adds custom pages selection functionality to Toolkit Resources
+package = "Toolkits"
+core = 7.x
+files[] = toolkits_resource_pages.module
+configure = admin/config/toolkits

@@ -1,0 +1,172 @@
+
+//  General
+
+.clearfix {
+  @include legacy-pie-clearfix;
+}
+
+// General
+.one-sidebar { 
+  #content {
+    float: left;
+    width: 712px;
+  }
+  #sidebar-first {
+    float: right;
+    width: 368px;
+  }
+}
+
+.two-sidebars { 
+  #content {
+    float: left;
+    width: 804px;
+  }
+
+  #sidebar-first {
+    float: right;
+    width: 276px;
+  }
+
+  #content-inner,
+  &.not-front #main-content #content h1.page-title {
+    float: left;
+    padding-right: 50px;
+    padding-left: 50px;
+    width: 425px;
+  }
+
+  &.not-front #main-content #content h1.page-title {
+    margin-right: 0;
+    margin-left: 0;
+  }
+
+  #sidebar-second {
+    margin-left: 526px;
+    width: 276px;
+  }
+}
+
+
+.container {
+  @include legacy-pie-clearfix;
+  clear: both;
+  margin: 0 auto;
+  position: relative;
+  width: 1080px;
+}
+
+.one-sidebar #main-content {
+  @include background($white image-url("bg_content-faux-columns.png") repeat-y -1266px 0);
+  @include legacy-pie-clearfix;
+}
+
+.no-sidebars #main-content {
+  @include legacy-pie-clearfix;
+  background-color: $white;
+}
+
+@media screen and (max-width: 1120px) {
+  .container {
+    width: 940px;
+  }
+  .one-sidebar,
+  .two-sidebars {
+    #content {
+      width: 620px;
+    }
+
+    #sidebar-first {
+      width: 320px;
+    }
+
+    #main-content {
+      background-position: -1358px 0;
+    }
+  }
+
+  .two-sidebars { 
+    #content {
+      background-image: none;
+    }
+
+    #content-inner,
+    &.not-front #main-content #content h1.page-title {
+      float: none;
+      width: auto;
+    }
+
+    #sidebar-second {
+      margin-left: 0;
+      padding-right: 50px;
+      padding-left: 50px;
+      width: auto;
+
+      .block-plain {
+        padding-right: 0;
+        padding-left: 0;
+      }
+    }
+  }
+}
+
+@media screen and (max-width: 960px) {
+  .container {
+    width: 758px;
+  }
+  .one-sidebar,
+  .two-sidebars {
+    #main-content {
+      background-position: -1478px 0;
+    }
+    #content {
+      width: 500px;
+    }
+    #sidebar-first {
+      width: 258px;
+    }
+  }
+}
+
+@media screen and (max-width: 778px) {
+  #sidebar-first {
+    @include background($white image-url("bg_content-faux-columns.png") repeat-y 100% 0);
+    border-top: 1px solid $gray;
+  }
+  .container {
+    width: 580px;
+  }
+  
+  .one-sidebar,
+  .two-sidebars {
+    #main-content {
+      background-color: $white;
+      background-image: none;
+    }
+
+    #content {
+      clear: both;
+      float: left;
+      width: 100%;
+    }
+
+    #sidebar-first {
+      clear: both;
+      float: left;
+      width: 100%;
+    }
+  }
+}
+
+@media screen and (max-width: 600px) {  
+  .container {
+    width: 460px;
+  }  
+}
+
+@media screen and (max-width: 480px) { 
+  .container {
+    width: 98%;
+  }
+}
+

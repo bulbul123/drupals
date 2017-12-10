@@ -1,0 +1,5 @@
+name = Toolkits Forms
+description = Handle/update/hack forms in the toolkits section
+package = Toolkits
+core = 7.x
+

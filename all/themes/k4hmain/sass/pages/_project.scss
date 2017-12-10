@@ -1,0 +1,103 @@
+.map-large {
+	margin-bottom: cp(50, $width-content);
+}
+
+#popup_close {
+	@extend .icon-close;
+	height: 21px !important;
+	width: 20px !important;
+}
+
+.openlayers-views-map {
+	#popup_GroupDiv {
+		img {
+			height: 736px !important;
+			max-width: 1276px !important;
+			width: 1276px !important;
+		}
+	}
+}
+
+.latest-posts,
+.latest-publications,
+.latest-events {
+	border-top: 1px solid $gray-light;
+	margin-bottom: $base-line-height*2;
+	margin-left: -(cp(50, 612));
+	margin-right: -(cp(50, 612));
+	padding: 0 cp(50, 612);
+	float: left;
+	width: cp(612, 612);
+	ul {
+		list-style-type: none;
+		margin: 0;
+		li {
+			@include background(image-url("bg_border-dotted.png") 0 0 repeat-x);
+			margin: 0;
+			padding: $base-line-height/2 0;
+		}
+	}
+	h2 {
+		@include adjust-font-size-to(15px, 1);
+		margin: $base-line-height 0;
+		padding-left: 30px;
+	}
+	h3 {
+		@include adjust-font-size-to(13px);
+		@extend .ff-serif;
+		margin: 0;
+		a {
+			@include link-colors($red, $red-dark);
+			text-decoration: none;
+			&:hover {
+				text-decoration: underline;
+			}
+		}
+	}
+	.date {
+		@include adjust-font-size-to(11px);
+	}
+	.view-footer {
+		@include background(image-url("bg_border-dotted.png") 0 0 repeat-x);
+		padding-top: $base-line-height/2;
+	}
+	.view-all {
+		@extend .read-more;
+	}
+}
+
+.node-type-project {
+	.region-content {
+		.block-views:nth-child(odd) {
+			float: right;
+			margin-left: 0;
+			padding-left: 0;
+			width: cp(281, 612);
+		}
+		.block-views:nth-child(even) {
+			float: left;
+			margin-right: 0;
+			width: cp(281, 612);
+		}
+		@media screen and (max-width: 778px) {
+			.block-views:nth-child(odd),
+			.block-views:nth-child(even) {
+				float: left;
+				width: cp(612, 612);
+				margin-left: -(cp(50, 612));
+				margin-right: -(cp(50, 612));
+				padding: 0 cp(50, 612);
+			}
+		}
+	}
+}
+
+.latest-posts h2 {
+	@extend .icon-latest-posts;
+}
+.latest-publications h2 {
+	@extend .icon-latest-publications;
+}
+.latest-events h2 {
+	@extend .icon-latest-events;
+}

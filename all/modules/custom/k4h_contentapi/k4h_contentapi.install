@@ -1,0 +1,47 @@
+<?php
+/**
+ * @file
+ * Install, update and uninstall functions for the Content API module.
+ */
+
+
+function k4h_contentapi_install() {
+  $node_types = array_map('check_plain', node_type_get_names());
+  variable_set('k4h_contentapi_content_types', serialize($node_types));
+  variable_set('k4h_contentapi_limit', 10);
+  variable_set('k4h_contentapi_sort_field', 'created');
+  variable_set('k4h_contentapi_sort_order', 'DESC');
+  variable_set('k4h_contentapi_show_count', TRUE);
+  variable_set('k4h_contentapi_node_hidden_fields', serialize(array()));
+
+  foreach (node_type_get_types() as $type) {
+    $name = $type->type;
+    variable_set("k4h_contentapi_$name", serialize(array()));
+  }
+}
+
+function k4h_contentapi_uninstall() {
+  variable_del('k4h_contentapi_content_types');
+  variable_del('k4h_contentapi_limit');
+  variable_del('k4h_contentapi_sort_field');
+  variable_del('k4h_contentapi_sort_order');
+  variable_del('k4h_contentapi_show_count');
+  variable_del('k4h_contentapi_node_hidden_fields');
+
+  foreach (node_type_get_types() as $type) {
+    $name = $type->type;
+    variable_del("k4h_contentapi_$name");
+  }
+}
+
+/**
+ * Delete node previously create to list groups. This is in module now.
+ */
+function k4h_contentapi_update_7000() {
+  // Moved groups list page into module, so delete the old node
+  $nid = substr(drupal_lookup_path('source', 'groups-list'), 5);
+  if (!empty($nid) && is_numeric($nid)) {
+    print "Deleting node $nid\n";
+    node_delete(22689);
+  }
+}

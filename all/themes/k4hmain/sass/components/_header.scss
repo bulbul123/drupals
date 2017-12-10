@@ -1,0 +1,329 @@
+#header .container {
+  @include background(image-url("logo-glow.png") 0 0 no-repeat);
+  position: relative;
+}
+
+//Logo
+h1#logo {
+  @include float-left;
+  margin: 0;
+  padding: 33px 0 12px 34px;
+  a {
+    display: block;
+    text-decoration: none;
+    &:hover {
+      span {
+        background-position: 0 0;
+      }
+    }
+    img {
+      display: block;
+    }
+  }
+}
+
+//Blog Speech Bubble
+#block-block-10 {
+  @include background(image-url("logo_speech_bubble.png") 100% 0 no-repeat);
+  @include text-shadow(0 1px 0 rgba($black, 0.1));
+  @include adjust-font-size-to(16px);
+  @extend .ff-serif;
+  font-style: italic;
+  color: $white;
+  padding: 18px 0;
+  position: absolute;
+  left: 238px;
+  text-align: center;
+  top: -7px;
+  width: 68px;
+}
+
+//Email Signup
+#block-search-form,.search-form {
+  @include float-right;
+  margin: 48px 24px 0 0;
+  label {
+    @include float-left;
+    @include adjust-font-size-to(13px,.8);
+    @include text-shadow($white 0 1px 1px);
+    font-weight: 700;
+    margin: 0 20px 0 0;
+    text-transform: uppercase;
+  }
+  .form-text {
+    @include float-left;
+    @include border-left-radius(24px/2);
+    @include box-shadow(rgba($black, 0.1) 0 1px 0 0 inset);
+    background-color: $white;
+    border: none;
+    border-top: solid 1px #AAAFB7;
+    color: $gray-dark;
+    padding: 0 5px 0 10px;
+  }
+  input[type="submit"],
+  .button {
+    @include float-left;
+    @include border-left-radius(0);
+    @include border-right-radius(24px/2);
+    @include button;
+    @extend .green;
+    border: none;
+    margin: 0 0 0 -1px;
+    @include adjust-font-size-to(15px,.7);
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .email-subscription {
+    clear: both;
+    float: none;
+    #mc_embed_signup {
+      @include legacy-pie-clearfix;
+      margin: 0 0 $base-line-height 34px;
+    }
+    label {
+      clear: both;
+      display: block;
+      float: none;
+      margin: 0;
+      text-align: left;
+    }
+  }
+
+}
+
+
+//Site Nav
+
+#navigation {
+  @include box-shadow(rgba($black, 0.2) 0 0 2px 0);
+  @include border-top-radius(4px);
+  @include legacy-pie-clearfix;
+  background-color: $white;
+  border-bottom: solid 1px $gray-lightest;
+  clear: both;
+}
+
+#navigation-dropdown {
+  display: none;
+  visibility: hidden;
+}
+
+//Main Menu
+.main-menu {
+  @include float-left;
+  width: 100%;
+  ul.menu {
+    @include float-left;
+    margin: 0;
+    padding: 0;
+  }
+  li {
+    @include horizontal-list-item(false, left);
+    border-right: solid 1px $gray-lightest;
+    padding: 9px;
+    a {
+      @include link-colors($navy-light, $navy-dark);
+      @include adjust-font-size-to(16px);
+      @include border-radius(30px / 2);
+      display: block;
+      font-weight: 700;
+      padding: 0 15px;
+      text-decoration: none;
+      &:hover {
+        background-color: $gray-lightest;
+      }
+    }
+    a.active,
+    a.active-trail {
+      @include link-colors($white, $white);
+      background-color: $royal-light;
+      @include background($royal-light linear-gradient($royal-light, $royal));
+      @include box-shadow($royal-dark 0 0 1px 0 inset);
+      @include text-shadow(0 1px 0 $royal-dark);
+    }
+  }
+  li.home a {
+     @include icon(0 -620px);
+     @include box-shadow($white 0 0 1px 0 inset);
+     //background-color: $white;
+     height: 30px;
+     overflow: hidden;
+     padding: 0 !important;
+     text-align: left;
+     text-indent: -9999em;
+     width: 30px;
+     &:hover {
+       @include icon(0 -580px);
+       background-color: transparent;
+     }
+  }
+}
+
+.front #block-menu-block-2 li.home a {
+  @include icon(0 -580px);
+}
+
+//Translate
+#block-translate-this-button, #block-gtranslate-gtranslate {
+  display: inline;
+  float: right;
+  margin: 52px 24px 0 0;
+  a.translate-this-button, h2 {
+    float: left;
+    padding-left: 24px;
+    @include icon(0 -60px);
+    color: $navy-darkest;
+    text-decoration: none;
+    @include text-shadow(rgba($white,0.9) 1px 1px 0);
+    text-transform: uppercase;
+    font-weight: bold;
+    @include adjust-font-size-to(13px,.8);
+    margin-left: 1em;
+  }
+
+  .block-content-wrap .content {
+    float: left;
+    margin: -0.2em 0 0.2em 0.2em;
+  }
+}
+
+//  Subscribe
+#block-block-13 {
+  display: inline;
+  float: right;
+  margin: 46px 24px 0 0;
+  a.email-signup {
+    float: left;
+    padding-left: 24px;
+    @include icon(0 -901px);
+    color: $navy-darkest;
+    text-decoration: none;
+    @include text-shadow(rgba($white,0.9) 1px 1px 0);
+    text-transform: uppercase;
+    font-weight: bold;
+    @include adjust-font-size-to(13px);
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+// Breadcrumb:
+#breadcrumb {
+  clear: both;
+  padding: 10px 0;
+  margin: 0;
+  background-color: $white;
+  border-bottom: 1px solid $gray-light;
+  color: $navy-light;
+  @include adjust-font-size-to(14px);
+
+  > ul {
+    margin: 0;
+    padding: 0 cp(50, $width-full);
+
+    li {
+      color: $navy-darkest;
+      display: inline;
+      margin: 0 .3em 0 0;
+      padding: 0 1em 0 0;
+      //@include icon(100% -700px);
+    }
+
+    a {
+      @extend .icon-slash;
+      color: $navy-light;
+      padding-right: 10px;
+      text-decoration: none;
+
+      &:hover {
+        text-decoration: underline;
+        color: $navy-darkest;
+      }
+    }
+  }
+}
+
+//  Navigation
+
+@media screen and (max-width: 1120px) {
+  #navigation {
+    ul.menu {
+      li {
+        padding: 6px;
+        a {
+          padding: 0 9px;
+        }
+      }
+    }
+  }
+}
+
+@media screen and (max-width: 960px) {
+  #navigation {
+    ul.menu {
+      li {
+        padding: 3px;
+        a {
+          @include adjust-font-size-to(12px);
+        }
+      }
+    }
+  }
+}
+@media screen and (max-width: 778px) {
+  #navigation-dropdown {
+    display: block;
+    float: left;
+    visibility: visible;
+    width: 90%;
+  }
+  #navigation {
+    .main-menu .menu-block-wrapper {
+      height: 24px;
+      padding: 6px 6px 6px 42px;
+      position: relative;
+    }
+    ul.menu {
+      left: 0;
+      position: absolute;
+      top: 0;
+      li {
+        display: none;
+        visibility: hidden;
+        &.first {
+          display: block;
+          visibility: visible;
+        }
+      }
+    }
+  }
+  h1#logo {
+    display: block;
+    float: none;
+    padding: $base-line-height 0;
+    text-align: center;
+    width: 100%;
+    img {
+      margin: 0 auto;
+    }
+  }
+  #block-translate-this-button {
+    clear: left;
+    display: inline;
+    float: left;
+    margin: 0 0 $base-line-height/2 $base-line-height/2;
+  }
+  #block-block-13 {
+    display: inline;
+    float: left;
+    margin: 0 0 $base-line-height/2 $base-line-height/2;
+  }
+  #block-search-form {
+    clear: right;
+    display: inline;
+    float: right;
+    margin: 0 $base-line-height/2 $base-line-height/2 0;
+  }
+}

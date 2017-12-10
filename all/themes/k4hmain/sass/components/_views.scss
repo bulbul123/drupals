@@ -1,0 +1,13 @@
+.view-multimedia {
+  .views-row {
+   @include clearfix;
+  }
+  .view-header {
+    font-weight: bold;
+    padding-bottom:1.25em;
+  }
+  .views-row-odd {
+    padding:.5em;
+    background-color: $gray-lightest;
+  }
+}

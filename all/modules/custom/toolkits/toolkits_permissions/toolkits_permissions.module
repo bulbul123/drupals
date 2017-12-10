@@ -1,0 +1,391 @@
+<?php
+
+/**
+ * Allow toolkit managers to manipulate the book outline field
+ */
+function toolkits_permissions_og_role_grant($gid, $uid, $rid) {
+  if ($rid == 3) {
+    $user = user_load($uid);
+    $book_role = user_role_load_by_name('book manager');
+    $user->roles[$book_role->rid] = 'book manager';
+    user_save($user);
+  }
+}
+
+function toolkits_permissions_og_role_revoke($gid, $uid, $rid) {
+  if ($rid == 3) {
+    $user = user_load($uid);
+    $book_role = user_role_load_by_name('book manager');
+    unset($user->roles[$book_role->rid]);
+    user_save($user);
+  }
+}
+
+
+
+/**
+ * Check the user og permission
+ */
+function toolkits_permissions_check_og_permission($node, $permission) {
+  $group = og_get_group('node', $node->nid);
+  if ($group) {
+    return og_user_access($group->gid, $permission);
+  }
+  return FALSE;
+}
+
+/**
+ * Check if the user has edit group permission for the specified group
+ */
+function toolkits_permissions_check_og_management($group) {
+  return og_user_access($group, 'update group');
+}
+
+/**
+ * Implements hook_form_alter
+ *
+ * Disable certain form options for the node forms. Current setup:
+ *
+ * For all users:
+ *
+ *  - On the toolkit page form, set the page form to auto-select the parent page
+ *  - If the book field is present, auto-select the group ID for the book
+ *  - Hide the "is group" checkbox on the toolkit add form
+ *
+ * For toolkit managers (og role):
+ *
+ *  - Disable the group audience field (b/c we'll auto-select)
+ *  - Disable the Toolkit Topics, Topics, Countries fields
+ *
+ */
+function toolkits_permissions_form_alter(&$form, &$form_state, $form_id) {
+  global $user;
+
+  $toolkit_forms = array('toolkit_resource_node_form', 'toolkit_page_node_form');
+  if (in_array($form_id, $toolkit_forms) && $form['language']['#value']) {
+    $language = $form['language']['#value'];
+  }
+
+  // Change node form to allow toolkit managers to access publish option and make it uncollapsed
+  if (in_array($form_id, array_merge(array('toolkit_node_form'), $toolkit_forms))) {
+    if (!empty($form['nid']['#value'])) {
+      $node = node_load($form['nid']['#value']);
+      if (in_array($form_id, $toolkit_forms)) {
+        $group_node = og_load($node->group_audience['und'][0]['gid']);
+        $node = node_load($group_node->etid);
+      }
+    } else {
+      if (isset($_GET['gids_node'][0])) {
+        $node = node_load(check_plain($_GET['gids_node'][0]));
+      }
+    }
+    if (isset($node)) {
+      $form['options']['#access'] = toolkits_permissions_publish_access($node);
+    }
+    $form['options']['#weight'] = 9;
+  }
+	
+	// -- Toolkit managers (og role) are granted 'book manager' perms programatically
+	// -- book manager perms allow fiddling with book, but we want to keep the 
+	if ($form_id == "toolkit_page_node_form") {
+		
+		// -- Get the entities from the form that are groups, then get gids from the db ---
+		$etid = array_keys($form['book']['bid']['#options']);		
+		$result = db_query("SELECT etid, gid FROM {og} WHERE etid IN (:nids)", array(':nids' => $etid));
+		foreach ($result as $record) {
+			$gid[$record->gid] = $record->etid;
+		}
+		
+		// -- Load the user, add their gids to the group var ---
+//		$user = user_load($form['uid']['#value']);
+    $user = user_load($user->uid);
+    foreach ($user->group_audience['und'] AS $group_audience) {
+      $group[] = $group_audience['gid'];
+    }
+
+    // -- Remove gids from the gid var that this user doesn't have access to, but allow all if user is an administrator --
+    foreach ($gid as $group_id => $entity_id) {
+      if (!in_array('administrator', $user->roles) && !in_array($group_id, $group)) {
+        unset ($gid[$group_id]);
+      }
+    }
+
+    // -- Flip the form element so we can search for entity ids, remove the ones that aren't in the gid array --
+    $form['book']['bid']['#options'] = array_flip($form['book']['bid']['#options']);
+    foreach ($form['book']['bid']['#options'] as $key => $value) {
+      if (!in_array($value, $gid) && $value != '<none>') {
+        unset($form['book']['bid']['#options'][$key]);
+      }
+    }
+    $form['book']['bid']['#options'] = array_flip($form['book']['bid']['#options']);
+  }
+
+
+  // toolkit resource/toolkit page forms
+  if (in_array($form_id, $toolkit_forms)) {
+    $form['book']['#weight'] = -10;
+    // Disable book for toolkit resource form if no book is already assigned
+    if ($form_id == 'toolkit_resource_node_form' && !isset($form['book']['mlid'])) {
+      // Assign default_value of 0 for book if not is already assigned so it won't get assigned to book in the background
+      if (!isset($form['book']['bid']['#default_value'])) {
+        $form['book']['bid']['#default_value'] = 0;
+      }
+      $form['book']['#access'] = FALSE;
+    }
+    // disable the group form field if the user does not have administer nodes
+    if (!user_access('administer nodes')) {
+
+      // disable the group_audience
+      //$form['group_audience'][$form['language']['#value']]['#disabled'] = true;
+      // disabling the group_audience caused 2 group audience entries, so just hidding it now
+      $form['group_audience']['#attributes']['class'][] = 'hidden';
+      // block access to the menu part of the form
+      $form['menu']['#access'] = FALSE;
+    } // if
+
+    // on the toolkit page form, add the parent page to the field_toolkit_page field
+    if (isset($_GET['toolkit_page'])) {
+      $page = intval($_GET['toolkit_page']);
+      $form['field_toolkit_page'][$form['language']['#value']]['#default_value'] = array($page);
+    }
+
+    // set the group field to the correct group
+    if (isset($form['book']) && ($form['group_audience'][$form['language']['#value']]['#default_value'][0] === 0 || empty($form['group_audience'][$form['language']['#value']]['#default_value'][0]))) {
+      $book_id = $form['book']['bid']['#default_value'];
+      if (empty($book_id) && strstr($form['#action'], 'gids_node')) {
+        $parts = explode('=', $form['#action']);
+        $book_id = end($parts);
+      }
+      $query = db_select('og', 'og');
+      $group_id = $query
+        ->fields('og', array('gid', 'etid'))
+        ->condition('etid', $book_id, '=')
+        ->execute()
+        ->fetchAssoc();
+
+      if ($group_id['gid']) {
+        $form['group_audience'][$form['language']['#value']]['#default_value'] = $group_id['gid'];
+      } // if
+    }
+  }
+
+  // if this is the toolkit form, hide the "group" checkbox and automatically
+  // check set to add a book if this is the add form
+  elseif ($form_id == 'toolkit_node_form') {
+    $form['group_group'][$form['language']['#value']]['#type'] = 'hidden';
+    if ($form['nid']['#value'] === null) {
+      // create a new book if this is a new toolkit
+      $form['book']['bid']['#default_value'] = 'new';
+    }
+
+    if (!user_access('administer nodes')) {
+      //$form['field_toolkit_topics'][$form['language']['#value']]['#disabled'] = true;
+      //$form['field_toolkit_toolkit_topics'][$form['language']['#value']]['#disabled'] = true;
+      //$form['field_country'][$form['language']['#value']]['#disabled'] = true;
+      $form['field_book_contextual_navigation'][$form['language']['#value']]['#access'] = FALSE;
+      $form['field_toolkit_topics'][$form['language']['#value']]['#access'] = FALSE;
+      $form['field_toolkit_toolkit_topics'][$form['language']['#value']]['#access'] = FALSE;
+      $form['field_country'][$form['language']['#value']]['#access'] = FALSE;
+      // deny access to the group visibility
+      $form['group_access']['#access'] = FALSE;
+      // deny access to catgory and related elearning fields
+      $form['field_toolkit_category']['#access'] = FALSE;
+      $form['field_toolkits_related_elearning']['#access'] = FALSE;
+    }
+  }
+}
+
+/**
+ * Implements hook_menu_alter
+ */
+function toolkits_permissions_menu_alter(&$items) {
+  if (isset($items['admin/content/book/%node'])) {
+    $items['admin/content/book/%node']['access callback'] = 'toolkits_permissions_check_og_permission';
+    $items['admin/content/book/%node']['access arguments'] = array(3, 'update group');
+  }
+  if (isset($items['all-toolkit-content'])) {
+    $items['all-toolkit-content']['access callback'] = 'toolkits_permissions_check_og_management';
+    $items['all-toolkit-content']['access arguments'] = array(1);
+  }
+}
+
+/**
+ * Implementation of hook_block_info().
+ */
+function toolkits_permissions_block_info() {
+  $blocks['tk-add-user'] = array(
+    'info' => t('Add new user'),
+  );
+  return $blocks;
+}
+
+/**
+ * Implementation of hook_block_view().
+ */
+function toolkits_permissions_block_view($delta = '') {
+  $block = array();
+  switch ($delta) {
+    case 'tk-add-user':
+      $block['subject'] = t('Add new user');
+      $block['content'] = toolkits_permissions_tk_add_user_contents();
+      break;
+  }
+  return $block;
+}
+
+function toolkits_permissions_tk_add_user_contents() {
+  return drupal_render(drupal_get_form('toolkits_permissions_form_tk_add_user'));
+}
+
+function toolkits_permissions_form_tk_add_user($form, &$form_state) {
+  // Form elements
+  $form = array();
+
+  // --- New user's name ---
+  $form['name'] = array(
+    '#title' => t('User name'),
+    '#type' => 'textfield',
+    '#description' => t('Spaces are allowed; punctuation is not allowed except for periods, hyphens, apostrophes, and underscores.'),
+    '#required' => TRUE,
+  );
+
+  // --- New user's email ---
+  $form['mail'] = array(
+    '#title' => t('Email'),
+    '#type' => 'textfield',
+    '#required' => TRUE,
+  );
+
+  // Submit
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Add new user',
+  );
+
+  $form['#user'] = drupal_anonymous_user();
+  $form['#user_category'] = 'register';
+  $form['#validate'][] = 'toolkit_perms_user_add_form_validate';
+  $form['#submit'][] = 'toolkit_perms_user_add_submit';
+
+  return $form;
+}
+
+function toolkit_perms_user_add_form_validate($form, &$form_state){
+  // Check for a valid username.
+  if ($error = user_validate_name($form_state['values']['name'])) {
+    form_set_error('name', $error);
+  } // */ And not a duplicate username.
+  elseif ((bool) db_select('users')->fields('users', array('uid'))->condition('uid', $form['#user']->uid, '<>')->condition('name', db_like($form_state['values']['name']), 'LIKE')->range(0, 1)->execute()->fetchField()) {
+    form_set_error('name', t('The name %name is already taken.', array('%name' => $form_state['values']['name'])));
+  }
+
+  // Validate the e-mail address.
+  if ($error = user_validate_mail($form_state['values']['mail'])) {
+    form_set_error('mail', $error);
+  }  // and check if email is taken by another user.
+  elseif ((bool) db_select('users')->fields('users', array('uid'))->condition('uid', $form['#user']->uid, '<>')->condition('mail', db_like($form_state['values']['mail']), 'LIKE')->range(0, 1)->execute()->fetchField()) {
+   form_set_error('mail', t('The e-mail address %email is already registered.'),array('%email' => $form_state['values']['mail']));
+  }
+
+}
+
+function toolkit_perms_user_add_submit($form, &$form_state){
+  // Generate a random password.
+  $pass = user_password();
+
+  form_state_values_clean($form_state);
+
+  $form_state['values']['pass'] = $pass;
+  $form_state['values']['init'] = $form_state['values']['mail'];
+
+  $user_info = array(
+    'pass' => user_password(),
+    'name' => $form_state['values']['name'],
+    'mail' => $form_state['values']['mail'],
+    'init' => $form_state['values']['mail'],
+    'access' => '0',
+    'status' => '1',
+    'timezone' => '0',
+  );
+
+  if ($new_user = user_save(NULL, $user_info)) {
+    drupal_set_message("Successfully created user '$new_user->name'.");
+  }
+  // Notify the new user so they can set a password and log in.
+  _user_mail_notify('register_admin_created', $new_user);
+
+}
+
+/*
+function toolkits_permissions_user_has_og_role($role) {
+  global $user;
+  $role_uid = array();
+  $result = db_query("SELECT uid FROM {og_users_roles}, {og_role} WHERE og_role.name = :role AND og_role.rid = og_users_roles.rid", array(':role' => $role));
+  foreach($result as $record) {
+    $role_uid[] = $record->uid;
+  }
+  if (in_array($user->uid, $role_uid)) {
+    return TRUE;
+  }else{
+    return FALSE;
+  }
+}
+*/
+/**
+ * Implements hook_node_view_alter
+ *
+ * This hook is responsible for adding the add content buttons, including
+ *
+ *    Add child page
+ *    Add resource
+ */
+function toolkits_permissions_node_view_alter(&$build) {
+  if ($build['#view_mode'] == 'teaser') {
+    return;
+  }
+
+  // we need the og_context module enabled
+  if (!module_exists('og_context')) {
+    return;
+  }
+
+  // current og context
+  $og_context = og_context();
+
+  // define which node types we should look at
+  $valid_node_types = array('toolkit', 'toolkit_page');
+  // make sure we're in the correct bundle & have the correct node type
+  if (in_array($build['#bundle'], $valid_node_types) && in_array($build['#node']->type, $valid_node_types)) {
+    if (isset($build['links'])) {
+      // Remove book button links to add pages as we have those links in the admin bar
+      if (isset($build['links']['book'])) {
+        unset($build['links']['book']['#links']);
+      }
+    }
+  }
+}
+
+/**
+ * Create the query string for use in the add content links
+ *
+ * These query parameters are needed by og_get_context_by_url (og module)
+ *
+ * @param array $build
+ */
+function _toolkits_permissions_add_content_query(&$build, $include_parent=true) {
+  // dpm($build);
+  $query = array(
+    'parent' => $build['#node']->book['mlid'],
+    'gids_node[]' => $build['#node']->book['bid'],
+  );
+  if (!$include_parent) {
+    $query['toolkit_page'] = $build['#node']->nid;
+    unset($query['parent']);
+  }
+  return $query;
+}
+
+
+function toolkits_permissions_publish_access($node, $permission = 'update group') {
+  return (toolkits_permissions_check_og_permission($node, $permission) || user_access('administer nodes'));
+}

@@ -1,0 +1,16 @@
+/* CSS for book navigation */
+
+a.page-next:hover,
+a.page-previous:hover,
+a.page-up:hover {
+  color: #39f;
+}
+
+.content .book-navigation a.page-next {
+  width: auto;
+}
+
+.section-toolkits .book-navigation .page-links {
+  margin-bottom: 1em;
+  background-color: #e1e3e6;
+}

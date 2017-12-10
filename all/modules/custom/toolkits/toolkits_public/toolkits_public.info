@@ -1,0 +1,4 @@
+name = "Toolkits Public"
+description = "Handles ensuring that when Toolkit access is changed it's content changes to match that state."
+package = Toolkits
+core = "7.x"

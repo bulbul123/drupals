@@ -1,0 +1,242 @@
+<?php
+
+/**
+ * @file
+ * Performs various security updates to different parts of user as selected by admin.
+ */
+
+/**
+ * Implements hook_menu_alter()
+ */
+function security_experimental_menu_alter(&$items) {
+  $newItems = array();
+  $adminPath = variable_get('security_admin_menu_path', 'admin');
+  foreach ($items as $key => $item) {
+    if ($key == 'admin' ) {
+      $newItems[$adminPath] = $item;
+    } else {
+      $newItems[preg_replace('/^admin\//', $adminPath . '/', $key)] = $item;
+    }
+  }
+  $items = $newItems;
+}
+
+/**
+ * Implements hook_admin_menu_output_build()
+ */
+function security_experimental_admin_menu_output_build(&$content) {
+  $adminPath = variable_get('security_admin_menu_path', 'admin');
+  if (isset($content['menu'][$adminPath]) && is_array($content['menu'][$adminPath])) {
+    foreach ($content['menu'][$adminPath] as $key => $item) {
+      // We keep #theme and #weight
+      if (strpos($key, $adminPath) !== FALSE) {
+        $content['menu'][$key] = $item;
+      }
+    }
+  }
+  unset($content['menu'][$adminPath]);
+  // Remove that pesky add comment section
+  unset($content['menu']['node/add']);
+  
+  // We also need to clear out those admin_menu functions that point to the wrong path.
+  if (isset($content['icon']['icon']) && is_array($content['icon']['icon'])) {
+    foreach ($content['icon']['icon'] as $key => $icon) {
+      if (is_array($icon)) {
+        if (isset($icon['#href'])) {
+          $content['icon']['icon'][$key]['#href'] = preg_replace('/^admin\//', variable_get('security_admin_menu_path', 'admin') . '/', $icon['#href']);
+        }
+      }
+    }
+  }
+  
+  // Finally, clear out that user count link
+  if (isset($content['user']['user-counter']['#href'])) {
+    $content['user']['user-counter']['#href'] = preg_replace('/^admin\//', variable_get('security_admin_menu_path', 'admin') . '/', $content['user']['user-counter']['#href']);
+  }
+}
+
+/**
+ * Implements hook_drupal_goto_alter()
+ * We use this to catch all redirections (including forms) and get them in the proper place
+ */
+function security_experimental_drupal_goto_alter(&$path, &$options, &$http_response_code) {
+  $path = preg_replace('/^admin/', variable_get('security_admin_menu_path', 'admin'), $path);
+}
+
+/**
+ * Implements hook_url_outbound_alter()
+ * This allows us to update all links throughout the site that get run through the URL function and get them linking back to the right place
+ */
+function security_experimental_url_outbound_alter(&$path, &$options, $original_path) {
+  $adminPath = variable_get('security_admin_menu_path', 'admin');
+  $path = preg_replace('/^admin\//', $adminPath . '/', $path);
+  // Handle the case where path is just 'admin'
+  if ($path == 'admin') {
+    $path = $adminPath;
+  }
+}
+
+/**
+ * Implements hook_menu()
+ */
+function security_experimental_menu() {
+  $items = array(
+    'admin/config/security/experimental' => array(
+      'title' => 'Security Experimental Settings',
+      'description' => 'Security Experimental Settings.',
+      'position' => 'left',
+      'weight' => -10,
+      'page callback' => 'system_admin_menu_block_page',
+      'access arguments' => array('access administration pages'),
+      'file' => 'system.admin.inc',
+      'file path' => drupal_get_path('module', 'system'),
+    ),
+    'admin/config/security/experimental/admin-menu' => array(
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('security_experimental_admin_menu_rewrite_form'),
+      'title' => t('Admin Menu Security Settings'),
+      'access arguments' => array('edit security settings'),
+    ),
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_menu_get_item_alter()
+ */
+function security_experimental_menu_get_item_alter(&$router_item, $path, $original_map) {
+  $adminPath = variable_get('security_admin_menu_path', 'admin');
+  if ($adminPath == 'admin') {
+    return;
+  } elseif (strpos($path, 'admin') != 0) {
+    return;
+  } elseif (isset($router_item['path']) && $router_item['path'] == 'admin') {
+    $router_item['path'] = preg_replace('/^admin/', $adminPath, $path);
+  }
+}
+
+/**
+ * Implements hook_form_alter()
+ */
+function security_experimental_form_alter(&$form, $form_state) {
+  // Rewrite form actions if it is the first menu item (We are looking at you module confirmation page)
+  $adminPosition = strpos($form['#action'], 'admin/');
+  if (isset($form['#action']) && ($adminPosition == 0 || $adminPosition == 1)) {
+    $form['#action'] = preg_replace('/admin\//', variable_get('security_admin_menu_path', 'admin') . '/', $form['#action']);
+  }
+  _security_experimental_process_form_links_reference($form);
+}
+
+function _security_experimental_process_form_links_reference(&$form) {
+  $form = _security_experimental_process_form_links($form);
+}
+ 
+function _security_experimental_process_form_links($form) {
+  $adminPath = variable_get('security_admin_menu_path', 'admin');
+  if ($adminPath == 'admin') {
+    // If adminPath is 'admin' we don't need to do anything because this is default
+    return $form;
+  }
+  foreach ($form as $key => $value) {
+    if (is_array($value)) {
+      $form[$key] = _security_experimental_process_form_links($value);
+    } elseif ($key == '#href') {
+      $form[$key] = preg_replace('/^admin\//', $adminPath . '/', $value);
+    } else {
+      $form[$key] = $value;
+    }
+  }
+  return $form;
+}
+ 
+/**
+ * Implements hook_form()
+ */
+function security_experimental_admin_menu_rewrite_form($form, $form_state) {
+  $form = array();
+  
+  $form['security_admin_menu_path'] = array(
+    '#type' => 'textfield',
+    '#required' => TRUE,
+    '#default_value' => variable_get('security_admin_menu_path', security_generate_random_string(14)),
+    '#description' => t('This new menu path will replace "admin" in the administration menu URL'),
+    '#title' => t('New Admin Menu Path'),
+  );
+    
+  $form['actions']['#type'] = 'actions';
+  $form['actions']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save configuration'),
+  );
+  
+  $form['#theme'] = 'system_settings_form';
+  
+  return $form;
+}
+
+/**
+ * Custom validation functionality for the security_admin_menu_rewrite_form
+ */
+function security_experimental_admin_menu_rewrite_form_validate($form, &$form_state) {
+  // Is the menu path short?
+  if (strlen($form_state['values']['security_admin_menu_path']) < 1) {
+    form_set_error('security_admin_menu_path', t('The admin menu path must be at least 1 character.  We recommend at least 8.'));
+  }
+  // Does the menu path contain invalid characters?
+  if (!ctype_alnum($form_state['values']['security_admin_menu_path'])) {
+    form_set_error('security_admin_menu_path', t('We know things are more secure when using special characters but browsers don\'t like them.  Stick to an alpha-numeric path.'));
+  }
+}
+ 
+/**
+ * Custom submission functionality for the security_admin_menu_rewrite_form
+ */
+function security_experimental_admin_menu_rewrite_form_submit($form, &$form_state) {
+  // Update the variable for use in the menu_alter function
+  $oldAdminPath = variable_get('security_admin_menu_path', 'admin');
+  variable_set('security_admin_menu_path', $form_state['values']['security_admin_menu_path']);
+  // Now clear the menu cache.  hook_menu_alter will take care of updating the URL's
+  if ($oldAdminPath != $form_state['values']['security_admin_menu_path']) {
+    cache_clear_all('menu');
+    cache_clear_all('admin_menu');
+    // Add a message telling the user of success
+    drupal_set_message('Successfully updated admin menu path');
+    // Set the redirect
+    $form_state['redirect'] = $form_state['values']['security_admin_menu_path'] . '/config/security/admin-menu';
+  }
+  variable_set('security_content_security_policy', $form_state['values']['security_content_security_policy']);
+}
+
+/*
+ * Implements theme_preprocess_html()
+ */
+function security_experimental_preprocess_html(&$vars) {
+  $adminMenuPath = strtolower(variable_get('security_admin_menu_path', 'admin'));
+  if (isset($vars['classes_array']) && is_array($vars['classes_array'])) {
+    foreach ($vars['classes_array'] as $key => $value) {
+      $vars['classes_array'][$key] = str_replace($adminMenuPath, 'admin', $value);
+    }
+  }
+}
+
+/**
+ * Implements theme_preprocess_page()
+ */
+function security_experimental_preprocess_page(&$vars) {
+  $adminMenuPath = variable_get('security_admin_menu_path', 'admin');
+  if (isset($vars['theme_hook_suggestions']) && is_array($vars['theme_hook_suggestions'])) {
+    foreach ($vars['theme_hook_suggestions'] as $key => $value) {
+      $vars['theme_hook_suggestions'][$key] = str_replace($adminMenuPath, 'admin', $value);
+    }
+  } 
+}
+
+/**
+ * Implements hook_custom_theme()
+ */
+function security_experimental_custom_theme() {
+  $adminPath = variable_get('security_admin_menu_path', 'admin');
+  if (arg(0) == $adminPath) {
+    return variable_get('admin_theme', variable_get('site_theme'));
+  }
+}

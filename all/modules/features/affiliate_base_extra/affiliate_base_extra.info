@@ -1,0 +1,7 @@
+name = Affiliate Base Extra
+description = Additional settings and configuration changes for Affiliates Base module
+package = Features
+core = 7.x
+dependencies[] = features
+dependencies[] = defaultcontent
+dependencies[] = taxonomy

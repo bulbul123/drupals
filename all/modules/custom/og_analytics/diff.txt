@@ -1,0 +1,172 @@
+diff --git a/docroot/sites/all/modules/custom/og_analytics/og_analytics.module b/docroot/sites/all/modules/custom/og_analytics/og_analytics.module
+index d611520..c2a0a31 100755
+--- a/docroot/sites/all/modules/custom/og_analytics/og_analytics.module
++++ b/docroot/sites/all/modules/custom/og_analytics/og_analytics.module
+@@ -1,6 +1,6 @@
+ <?php
+ 
+-module_load_include('inc', 'google_analytics_reports', 'google_analytics_reports.pages');
++//module_load_include('inc', 'google_analytics_reports_api', 'google_analytics_reports.pages');
+ 
+ /**
+  * Implementation of hook_menu().
+@@ -44,8 +44,8 @@ function og_analytics_menu() {
+  * @return An HTML summary of the site-wide statistics.
+  */
+ function og_analytics_google_analytics_reports_summary_page($group_nid, $start = '-31 days', $end = '-1 day') {
+-  if (!variable_get('google_analytics_reports_oauth_token', FALSE)) {
+-    drupal_set_message(t('You must <a href="!url">authorize</a> Drupal to use your Analytics account before you can view reports.', array('!url' => url('admin/config/system/google-analytics-reports'))), 'warning');
++  if (!variable_get('google_analytics_reports_api_oauth_token', FALSE)) {
++    drupal_set_message(t('You must <a href="!url">authorize</a> Drupal to use your Analytics account before you can view reports.', array('!url' => url('admin/config/system/google-analytics-reports-api'))), 'warning');
+     return ' ';
+   }
+ 
+@@ -72,14 +72,14 @@ function og_analytics_google_analytics_reports_summary_page($group_nid, $start =
+   if (in_array(FALSE, $summary, TRUE)) {
+     $menu_item = menu_get_item();
+     if ($menu_item['href'] == 'admin/reports/google-analytics') {
+-      drupal_set_message(_google_analytics_reports_error_message(), 'error');
++      drupal_set_message(_google_analytics_reports_api_error_message(), 'error');
+       return ' ';
+     }
+     else {
+ 
+     }
+     $return = "<h2>Google Analytics Summary is currently unavailable.</h2><p>If you need an analytics report, please contact <a href='mailto:elizabeth.tully@jhu.edu'>Liz Tully directly</a>.</p>";
+-    return $return . '<p>' . _google_analytics_reports_error_message() . '</p>';
++    return $return . '<p>' . _google_analytics_reports_api_error_message() . '</p>';
+   }
+ 
+   $output .= theme('og_analytics_reports_summary', $summary);
+@@ -156,7 +156,7 @@ function _og_analytics_google_analytics_reports_visits($path, $start = '-31 days
+ //    'filters' => _google_analytics_reports_path_filter($path),
+     'filters' => 'ga:pagePath=~^/' . preg_quote($path),
+   );
+-  $feed = google_analytics_api_report_data($params);
++  $feed = google_analytics_reports_api_report_data($params);
+   if ($feed->error) {
+     return FALSE;
+   }
+@@ -166,19 +166,12 @@ function _og_analytics_google_analytics_reports_visits($path, $start = '-31 days
+   // We need to supply a few data points on the chart, but not all
+   $count = count($feed->results->rows);
+   if ($count <= 35) {
+-    $mod = 2;
+-  } elseif ($count <= 93) {
+-    $mod = 5;
+-  } elseif ($count <= 280) {
+     $mod = 10;
+-  } elseif ($count <= 364) {
+-    $mod = 30;
+-  } elseif ($count > 400) {
+-    $mod = 0;
+   } else {
+-    $mod = 40;
++    $mod = 20;
+   }
+   $data_point_count = 0;
++  $multiples_of = round($count/$mod);
+   foreach ($feed->results->rows as $row) {
+     $data[$row['date']] = $row['sessions'];
+     $max_visits = max($row['sessions'], $max_visits);
+@@ -187,11 +180,15 @@ function _og_analytics_google_analytics_reports_visits($path, $start = '-31 days
+     $markers[] = array_merge(chart_shape_marker(0, $row['visits'], 's', 10, '6896C8'), $opt);
+ //    $markers[] = chart_shape_marker(0, $row['visits'], 's', 10, 'ff0000');
+ */
+-    if (fmod($row['date'], $mod) == 0 && $data_point_count < 8) {
+-      $data_point_count++;
+-      $date = str_split($row['date'], 2);
++    $data_point_count++;
++    if (fmod($row['date'], $mod) == 0 && ($data_point_count === 1 || $data_point_count % $multiples_of == 0)) {
++      if (strlen($row['date']) === 8) { // This is a date in the yyyymmdd format
++        $date = str_split($row['date'], 2);
+ //      $display_date = $date[2] . '/' . $date[3] . ' (' . $row['visits'] . ')';
+-      $display_date = $date[2] . '/' . $date[3];
++        $display_date = $date[2] . '/' . $date[3];
++      } else { // This is likely a timestamp, so handle differently
++        $display_date = date('m/d', $row['date']);
++      }
+       $lables[CHART_AXIS_X_BOTTOM][0][] = chart_mixed_axis_label(t(' '));
+       $lables[CHART_AXIS_X_BOTTOM][1][] = chart_mixed_axis_label($display_date);
+ //    $lables[CHART_AXIS_Y_LEFT][0][] = chart_mixed_axis_label($row['visits'], $i * 10);
+@@ -283,7 +280,7 @@ function _og_analytics_google_analytics_reports_usage($path, $start = '-31 days'
+ //    'filters' => _google_analytics_reports_path_filter($path),
+     'filters' => 'ga:pagePath=~^/' . preg_quote($path),
+   );
+-  $feed = google_analytics_api_report_data($params);
++  $feed = google_analytics_reports_api_report_data($params);
+   if ($feed->error) {
+     return FALSE;
+   }
+@@ -305,7 +302,7 @@ function _og_analytics_google_analytics_reports_countries($path, $start = '-31 d
+ //    'filters' => _google_analytics_reports_path_filter($path),
+     'filters' => 'ga:pagePath=~^/' . preg_quote($path),
+   );
+-  $feed = google_analytics_api_report_data($params);
++  $feed = google_analytics_reports_api_report_data($params);
+   if ($feed->error) {
+     return FALSE;
+   }
+@@ -374,7 +371,7 @@ function _og_analytics_google_analytics_reports_countries_list($path, $start = '
+ //    'filters' => _google_analytics_reports_path_filter($path),
+     'filters' => 'ga:pagePath=~^/' . preg_quote($path),
+   );
+-  $feed = google_analytics_api_report_data($params);
++  $feed = google_analytics_reports_api_report_data($params);
+   if ($feed->error) {
+     return FALSE;
+   }
+@@ -404,7 +401,7 @@ function _og_analytics_google_analytics_reports_top_pages($path, $start = '-31 d
+ //    'filters' => _google_analytics_reports_path_filter($path),
+     'filters' => 'ga:pagePath=~^/' . preg_quote($path),
+   );
+-  $feed = google_analytics_api_report_data($params);
++  $feed = google_analytics_reports_api_report_data($params);
+   if ($feed->error) {
+     return FALSE;
+   }
+@@ -436,7 +433,7 @@ function _og_analytics_google_analytics_reports_top_referrals($path, $start = '-
+   if ($path) {
+ //    $params['filters'] .= ';' . _google_analytics_reports_path_filter($path);
+   }
+-  $feed = google_analytics_api_report_data($params);
++  $feed = google_analytics_reports_api_report_data($params);
+   if ($feed->error) {
+     return FALSE;
+   }
+@@ -460,7 +457,7 @@ function _og_analytics_google_analytics_reports_top_searches($path = '', $start
+   if ($path) {
+ //    $params['filters'] .= ';' . 'ga:pagePath=@' . preg_quote($path);
+   }
+-  $feed = google_analytics_api_report_data($params);
++  $feed = google_analytics_reports_api_report_data($params);
+   if ($feed->error) {
+     return FALSE;
+   }
+@@ -490,7 +487,7 @@ function _og_analytics_reports_top_keywords($path = '', $start = '-31 days', $en
+   if ($path) {
+ //    $params['filters'] .= ';' . _google_analytics_reports_path_filter($path);
+   }
+-  $feed = google_analytics_api_report_data($params);
++  $feed = google_analytics_reports_api_report_data($params);
+   if ($feed->error) {
+     return FALSE;
+   }
+@@ -521,7 +518,7 @@ function _og_analytics_google_analytics_reports_source_types($path, $group_nid,
+     'max_results' => 10,
+     'filters' => 'ga:pagePath=~^/' . preg_quote($path),
+   );
+-  $feed = google_analytics_api_report_data($params);
++  $feed = google_analytics_reports_api_report_data($params);
+   if ($feed->error) {
+     return FALSE;
+   }
+@@ -650,7 +647,7 @@ function template_preprocess_og_analytics_reports_summary(&$vars) {
+   $pages = array();
+   foreach ($vars['pages'] as $page) {
+     if ($page['pagePath'] == '/index.html') {
+-      $page['pagePath'] = variable_get('google_analytics_reports_default_page', '/');
++      $page['pagePath'] = variable_get('google_analytics_reports_api_default_page', '/');
+     }
+     $pages[] = l($page['pageTitle'], "http://$page[hostname]$page[pagePath]", array('external' => TRUE, 'html' => TRUE)) . ' - ' . format_plural($page['pageviews'], '1 View', '@views Views', array('@views' => number_format($page['pageviews'])));
+   }

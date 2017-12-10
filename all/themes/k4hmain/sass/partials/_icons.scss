@@ -1,0 +1,79 @@
+//  Icons
+//--------------------------------------------------------------------------------
+
+@mixin icon($normal: 0 0, $hover: "none", $active: "none") {
+  @include background-image(image-url("icons.png"));
+  background-repeat: no-repeat;
+  background-position: $normal;
+  @if $hover != 'none' {
+    &:hover {
+      background-position: $hover;
+    }
+  }
+
+  @if $active != 'none' {
+    &:focus,
+    &:active {
+      background-position: $active;
+    }
+  }
+}
+
+@mixin product-icon($normal: 0 0, $hover: "none", $active: "none") {
+  @include icon($normal, $hover, $active);
+  @include background-image(image-url("icons-products2.png"));
+}
+
+.icon-globe { @include icon(10px -27px);}
+
+.icon-arrow { @include icon(100% -140px);}
+
+.icon-twitter {     @include icon(9px -692px);}
+.icon-facebook {    @include icon(9px -732px);}
+.icon-youtube {     @include icon(9px -772px);}
+.icon-linkedin {    @include icon(9px -812px);}
+.icon-rss {         @include icon(9px -852px);}
+.icon-newsletter {  @include icon(9px -892px);}
+
+.icon-featured-topic { @include icon(0 -940px);}
+
+.icon-slash {           @include icon(100% -1020px);}
+
+.icon-pager-next {      @include icon(100% -1060px, 100% -1100px);}
+.icon-pager-last {      @include icon(100% -1140px, 100% -1180px);}
+.icon-pager-previous {  @include icon(0 -1060px, 0 -1100px);}
+.icon-pager-first {     @include icon(0 -1140px, 0 -1180px);}
+
+.icon-facet-remove {          @include icon(0 -1220px);}
+.icon-facet-remove-hover {    @include icon(0 -1260px);}
+
+.icon-zoom {                  @include icon(0 -1300px);}
+
+.icon-latest-posts {          @include icon(0 -380px);}
+.icon-latest-toolkits {       @include icon(0 -1340px);}
+.icon-latest-publications {   @include icon(0 -1380px);}
+.icon-latest-events {         @include icon(0 -1420px);}
+
+.icon-close {                 @include icon(0 -1620px, 0 -1660px);}
+
+.icon-user {                  @include icon(0 -1700px);}
+
+//  Product Icons
+.icon-product-popline {       @include product-icon(0 -40px);}
+.icon-product-forums {        @include product-icon(0 -120px);}
+.icon-product-toolkits {      @include product-icon(0 -200px);}
+.icon-product-elearning {     @include product-icon(0 -280px);}
+.icon-product-photoshare {    @include product-icon(0 -360px);}
+.icon-product-k4health {      @include product-icon(0 -440px);}
+.icon-product-handbook {      @include product-icon(0 -520px);}
+.icon-product-ghsp-journal {  @include product-icon(0 -600px);}
+
+//  8/03/15 Issue 4058 request removing rollovers
+//.icon-product-popline {       @include product-icon(0 0, 0 -40px);}
+//.icon-product-forums {        @include product-icon(0 -80px, 0 -120px);}
+//.icon-product-toolkits {      @include product-icon(0 -160px, 0 -200px);}
+//.icon-product-elearning {     @include product-icon(0 -240px, 0 -280px);}
+//.icon-product-photoshare {    @include product-icon(0 -320px, 0 -360px);}
+//.icon-product-k4health {      @include product-icon(0 -400px, 0 -440px);}
+//.icon-product-handbook {      @include product-icon(0 -480px, 0 -520px);}
+//.icon-product-ghsp-journal {  @include product-icon(0 -560px, 0 -600px);}

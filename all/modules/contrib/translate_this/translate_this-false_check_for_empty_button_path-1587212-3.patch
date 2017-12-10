@@ -1,0 +1,18 @@
+diff --git a/translate_this.module b/translate_this.module
+index ee950a0..37670a2 100644
+--- a/translate_this.module
++++ b/translate_this.module
+@@ -121,11 +121,11 @@ function translate_this_js_options() {
+ 
+   // Display options.
+   if (variable_get('translate_this_disable_button_image', FALSE) == TRUE) {
+-    $button_path = $GLOBALS['base_url'] . '/' . variable_get('translate_this_alternate_button_image_path');
++    $button_path = $GLOBALS['base_url'] . '/' . variable_get('translate_this_alternate_button_image_path', '');
+     $button_height = variable_get('translate_this_button_height');
+     $button_width = variable_get('translate_this_button_width');
+ 
+-    if (empty($button_path)) {
++    if (empty($button_path) || $button_path === $GLOBALS['base_url'] . '/') {
+       $content .= "noBtn : true,\r";
+     }
+     else {

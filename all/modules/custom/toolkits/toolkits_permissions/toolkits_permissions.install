@@ -1,0 +1,40 @@
+<?php
+
+/**
+ * Implements hook_install().
+ */
+function toolkits_permissions_install() {
+  // Create the 'book manager' role so we can assign permission to create books
+  $role = new stdClass();
+  $role->name = 'book manager';
+  // $role->weight = 10;
+  user_role_save($role);
+
+  // Assign permissions to 'book manager' role
+  $book_role = user_role_load_by_name('book manager');
+  $book_permissions = array(
+    'add content to books',
+    'view any unpublished toolkit_page content',
+    'view any unpublished toolkit_resource content',
+  );
+  user_role_grant_permissions($book_role->rid, $book_permissions);
+}
+
+
+/**
+ * Assign permissions to 'book manager' role for Toolkit Managers
+ */
+function toolkits_permissions_update_7001() {
+  // Assign permissions to 'book manager' role
+  $book_role = user_role_load_by_name('book manager');
+  $permissions = user_role_permissions(array($book_role->rid => $book_role->rid));
+  if (!array_key_exists('view any unpublished toolkit_page content', $permissions[$book_role->rid])) {
+    $book_role = user_role_load_by_name('book manager');
+    $book_permissions = array(
+      'add content to books',
+      'view any unpublished toolkit_page content',
+      'view any unpublished toolkit_resource content',
+    );
+    user_role_grant_permissions($book_role->rid, $book_permissions);
+  }
+}

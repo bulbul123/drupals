@@ -1,0 +1,6 @@
+name = Affiliate Partners Extra
+description = Additional settings and configuration changes for Affiliates Partners module
+package = Features
+core = 7.x
+dependencies[] = features
+dependencies[] = block

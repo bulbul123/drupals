@@ -1,0 +1,18 @@
+***************
+*** 524,531 ****
+    }
+  
+    if (!url_is_external($parsed['url'])) {
+-     // Decode the URL to avoid double encoding when Drupal encodes page/file for delivery
+-     $parsed['url'] = urldecode(drupal_get_normal_path($parsed['url'], $form_state['values']['language']));
+    }
+  
+    form_set_value($element, $parsed['url'], $form_state);
+--- 523,529 ----
+    }
+  
+    if (!url_is_external($parsed['url'])) {
++     $parsed['url'] = drupal_get_normal_path($parsed['url'], $form_state['values']['language']);
+    }
+  
+    form_set_value($element, $parsed['url'], $form_state);

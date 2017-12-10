@@ -1,0 +1,4 @@
+name = "K4Health Node Validation"
+description = "Makes sure users don't enter wacky things like links to mail.jhsph.edu or paste in binary dumps of images."
+package = "K4H"
+core = "7.x"

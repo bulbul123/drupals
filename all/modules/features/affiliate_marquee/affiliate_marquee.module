@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Affiliate Marquee feature.
+ */
+
+include_once('affiliate_marquee.features.inc');

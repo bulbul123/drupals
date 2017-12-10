@@ -1,0 +1,65 @@
+<?php
+
+/**
+ * Implements hook_schema()
+ */
+function og_blocks_schema() {
+  $schema['og_blocks'] = array(
+    'description' => 'OG Block configuration table',
+    'fields' => array(
+      'id' => array(
+        'description' => 'Block ID',
+        'type' => 'serial',
+        'unsigned' => true,
+        'not null' => true,
+      ),
+      'title' => array(
+        'description' => 'The title of the block',
+        'type' => 'varchar',
+        'length' => 100,
+        'not null' => true,
+        'default' => '',
+      ),
+      'description' => array(
+        'description' => 'Descriptive information for this block',
+        'type' => 'varchar',
+        'length' => 100,
+        'not null' => true,
+        'default' => '',
+      ),
+      'class' => array(
+        'description' => 'The OG Blocks class used for this block',
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => true,
+        'default' => 'OGBlocksBasic',
+      ),
+      'content_type' => array(
+        'description' => 'The content type used with this block',
+        'type' => 'varchar',
+        'length' => 100,
+        'not null' => true,
+        'default' => '',
+      ),
+      'view' => array(
+        'description' => 'The view this block will use for output',
+        'type' => 'varchar',
+        'length' => 100,
+        'not null' => true,
+        'default' => '',
+      ),
+    ),
+    'primary key' => array('id'),
+  );
+  return $schema;
+}
+
+/**
+ * Implements hook_uninstall()
+ * 
+ * Used to clean up the old variables that were used for storing configuration
+ */
+function og_blocks_uninstall() {
+  variable_del('block_view');
+  variable_del('block_content_type');
+}

@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Affiliate Latest Updates feature.
+ */
+
+include_once('affiliate_latest_updates.features.inc');

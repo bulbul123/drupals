@@ -1,0 +1,11 @@
+name = OG Analytics
+description = Provides Google Analytics Reports specific to an Organic Group's path.
+package = Statistics
+core = "7.x"
+
+; Always available CSS
+stylesheets[all][] = css/og_analytics.css
+; Dependencies
+dependencies[] = chart
+dependencies[] = google_analytics_reports
+dependencies[] = google_analytics_reports_api

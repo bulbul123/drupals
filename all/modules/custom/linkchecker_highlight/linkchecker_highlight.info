@@ -1,0 +1,4 @@
+name = Linkchecker Highlight
+description = View links determined to be broken by the Linkchecker module with highlighted backgrounds
+core = 7.x
+dependencies[] = linkchecker

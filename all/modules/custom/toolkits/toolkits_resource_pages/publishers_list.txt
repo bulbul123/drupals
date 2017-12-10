@@ -1,0 +1,4 @@
+# The following is a list of publishers we have permission from to linclude their resources in offline toolkits
+
+AED Satellife
+Journal of Telemedicine and Telecare

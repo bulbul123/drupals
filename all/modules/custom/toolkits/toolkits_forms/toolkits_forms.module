@@ -1,0 +1,120 @@
+<?php 
+
+/**
+ * Implements hook_form_alter
+ * 
+ * Update the views filters to create dropdowns for year & organization
+ */
+function toolkits_forms_form_alter(&$form, &$form_state, $form_id) {
+  switch ($form_id) {
+    case 'views_exposed_form':
+      _toolkits_forms_views_filter_alter($form, $form_state, $form_id); 
+      break;
+    case 'book_admin_edit':
+      _toolkits_forms_book_admin_alter($form, $form_state, $form_id);
+      break;
+  }
+}
+
+function _toolkits_forms_book_admin_alter(&$form, &$form_state, $form_id) {
+  if (isset($form['save']) && $form['save']['#value'] == 'Save book pages') {
+    $form['save']['#value'] = 'Save';
+  }
+}
+
+function _toolkits_forms_views_filter_alter(&$form, &$form_state, $form_id) {
+  $node = node_load(arg(1));
+  // We're likely on an edit for if there's no $node
+  if (empty($node) && $_GET['q'] != 'toolkits/resources') {
+    return;
+  }
+
+  // get years for resource form filter
+  if ($form_id == 'views_exposed_form' && isset($form['field_toolkit_year_value'])) {
+    $query = db_select('field_data_field_toolkit_year', 'y')
+      ->fields('y', array('field_toolkit_year_value'))
+      ->distinct()
+      ->condition('y.bundle', 'toolkit_resource', '=')
+      ->orderBy('y.field_toolkit_year_value');
+    $query->innerJoin('field_data_field_toolkit_page', 'p', 'y.entity_id = p.entity_id');
+    // Only limit to nodes on current page if not in all resources area
+    if (is_object($node) && $node->type != 'toolkit') {
+      $query->condition('p.field_toolkit_page_nid', $node->nid);
+    } elseif (is_object($node)) { // Limit to nodes in all resources form
+      $parts = explode('/', urldecode($form['#action']));
+      $nids = explode('+', $parts[2]);
+      $query->condition('y.entity_id', $nids, 'IN');
+    }
+    $db_years = $query->execute();
+
+    // get year options
+    $year_options = array('' => '- Any -');
+    foreach ($db_years as $year) {
+      $year_options[$year->field_toolkit_year_value] = $year->field_toolkit_year_value;
+    }
+  
+    // enabling this causes illegal choice error
+    $form['field_toolkit_year_value']['#type'] = 'select';
+    $form['field_toolkit_year_value']['#multiple'] = false;
+    $form['field_toolkit_year_value']['#size'] = 1;
+    $form['field_toolkit_year_value']['#options'] = $year_options;
+  }
+  
+  // get organizations for resource form filter
+  if ($form_id == 'views_exposed_form' && isset($form['field_toolkit_organization_value'])) {
+    $query = db_select('field_data_field_toolkit_organization', 'org')
+      ->fields('org', array('field_toolkit_organization_value'))
+      ->distinct()
+      ->orderBy('org.field_toolkit_organization_value');
+    $query->innerJoin('field_data_field_toolkit_page', 'p', 'org.entity_id = p.entity_id');
+    // Only limit to nodes on current page if not in all resources area
+    if (is_object($node) && $node->type != 'toolkit') {
+      $query->condition('p.field_toolkit_page_nid', $node->nid);
+    } elseif (is_object($node)) { // Limit to nodes in all resources form
+      $parts = explode('/', urldecode($form['#action']));
+      $nids = explode('+', $parts[2]);
+      $query->condition('org.entity_id', $nids, 'IN');
+    }
+    $organizations = $query->execute();
+    $organization_options = array('' => '- Any -');
+    foreach ($organizations as $organization) {
+      // Filter out some basic mistakes for org list
+      if (strlen($organization->field_toolkit_organization_value) > 2) {
+        $organization_options[$organization->field_toolkit_organization_value] = $organization->field_toolkit_organization_value;
+      }
+    }
+  
+    $form['field_toolkit_organization_value']['#type'] = 'select';
+    $form['field_toolkit_organization_value']['#multiple'] = false;
+    $form['field_toolkit_organization_value']['#size'] = 1;
+    $form['field_toolkit_organization_value']['#options'] = $organization_options;
+  }
+
+  // get languages for resource form filter
+  if ($form_id == 'views_exposed_form' && isset($form['field_toolkit_languages_tid'])) {
+    $query = db_select('field_data_field_toolkit_languages', 'l')
+      ->fields('l', array('field_toolkit_languages_tid'));
+    $query->innerJoin('taxonomy_term_data', 'td', 'l.field_toolkit_languages_tid = td.tid');
+    $query->fields('td', array('name'));
+    $query->distinct();
+    $query->orderBy('td.name');
+    $query->innerJoin('field_data_field_toolkit_page', 'p', 'l.entity_id = p.entity_id');
+    // Only limit to nodes on current page if not in all resources area
+    if (is_object($node) && $node->type != 'toolkit') {
+      $query->condition('p.field_toolkit_page_nid', $node->nid);
+    } elseif (is_object($node)) { // Limit to nodes in all resources form
+      $parts = explode('/', urldecode($form['#action']));
+      $nids = explode('+', $parts[2]);
+      $query->condition('l.entity_id', $nids, 'IN');
+    }
+    $languages = $query->execute();
+    $language_options = array('All' => '- Any -');
+    foreach ($languages as $language) {
+      $language_options[$language->field_toolkit_languages_tid] = $language->name;
+    }
+
+    $form['field_toolkit_languages_tid']['#type'] = 'select';
+    $form['field_toolkit_languages_tid']['#options'] = $language_options;
+
+  }
+}

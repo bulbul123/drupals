@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Affiliate Blog feature.
+ */
+
+include_once('affiliate_blog.features.inc');

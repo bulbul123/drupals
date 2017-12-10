@@ -1,0 +1,6 @@
+name = Apache Solr Search Block
+description = Provides a block to display an alternate search form
+package = Search Toolkit
+core = 7.x
+dependencies[] = apachesolr_search
+dependencies[] = block

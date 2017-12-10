@@ -1,0 +1,386 @@
+<?php
+function toolkits_resource_pages_menu() {
+  $items['resource_pages'] = array(
+    'title' => 'Return resource pages data.', 
+    'page callback' => 'toolkits_resource_pages_data', 
+    'access arguments' => array('access content'), 
+    'type' => MENU_CALLBACK,
+  );
+
+  // Settings page.
+  $items['admin/config/toolkits'] = array(
+    'title' => 'Toolkits',
+    'description' => 'Settings for Toolkits modules.',
+    'position' => 'right',
+    'weight' => -5,
+    'page callback' => 'system_admin_menu_block_page',
+    'access arguments' => array('administer site configuration'),
+    'file' => 'system.admin.inc',
+    'file path' => drupal_get_path('module', 'system'),
+  );
+
+  $items['admin/config/toolkits/resources'] = array(
+    'title' => 'Toolkit Resource Pages',
+    'description' => 'Setup configuration for Toolkit Resource Pages.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('toolkits_resource_pages_settings'),
+    'position' => 'right',
+    'weight' => -10,
+    'access callback' => 'user_access',
+    'access arguments' => array('access administration pages'),
+    'file' => 'toolkits_resource_pages.admin.inc',
+  );
+
+  return $items;
+}
+
+function toolkits_resource_pages_data($method, $id) {
+	
+	if ($method == 'nid') {
+		$node = node_load($id);
+		$result = db_query("SELECT etid, gid FROM {og} WHERE etid = :nid", array(':nid' => $node->nid));
+		foreach ($result as $record) {
+			$gid = $record->gid;
+		}
+	} else {
+		$gid = $id;
+	}
+	
+	$result = db_query("SELECT nid FROM {book}, {og} WHERE gid = :gid AND etid = bid", array(':gid' => $gid));
+		
+	foreach ($result as $record) {
+		$toolkit_page[] = $record->nid;
+	}
+	die(implode("+", $toolkit_page));
+}
+
+function toolkits_resource_pages_form_alter(&$form, $form_state, $form_id) {
+	if ($form_id == "toolkit_resource_node_form") {
+
+    // Recreate the book options so we can put none on top
+    if (isset($form['book'])) {
+      $options = array();
+      $options[0] = '<' . t('none') . '>';
+      foreach ($form['book']['bid']['#options'] as $k => $v) {
+        $options[$k] = $v;
+      }
+      $form['book']['bid']['#options'] = $options;
+
+      // Add a submit function to process removing from book when 'none' is selected
+      $form['#submit'][] = '_toolkits_pages_check_book';
+    }
+/*		
+		// --- Add JS to limit page choices based on audience ---
+		if (isset($form['group_audience'])) {
+			$form['group_audience']['#attached'] = array(
+	      'js' => array(
+	        drupal_get_path('module', 'toolkits_resource_pages') . '/js/toolkits_resource_pages.js',
+	      ),
+	    );
+		}
+*/
+
+    // Add an after_build function to remove validation for Pages to fix error
+    // when file attached or multiple links included
+    $form['field_toolkit_page'][$form['field_toolkit_page']['#language']]['#after_build'][] = 'toolkits_resource_pages_remove_validation';
+
+    // Recreate the pages available to put this on
+    $gids = array();
+    if (isset($form['#node']->group_audience)) {
+      foreach ($form['#node']->group_audience[$form['#node']->language] as $id => $group) {
+        $gids[] = $group['gid'];
+      }
+    } else {
+      $group = og_get_group('node', check_plain($_GET['gids_node'][0]));
+      $gids[] = $group->gid;
+    }
+    // Make sure you get $gids for new pages, which don't have a group_audience yet
+    if (empty($gids) && isset($_GET['gids_node'])) {
+      foreach ($_GET['gids_node'] as $etid) {
+        $get_gids = og_get_group_ids($entity_type = 'node', array($etid), array(OG_STATE_ACTIVE), FALSE);
+        $gids[] = $get_gids[$etid];
+      }
+    }
+    $options = array();
+    foreach ($gids as $gid) {
+      $gnid = db_query("SELECT etid FROM {og} WHERE gid = :gid", array(':gid' => $gid))->fetchField();
+      $toc = book_toc($gnid, 10);
+      foreach ($toc as $mlid => $title) {
+        $result = db_query("SELECT b.nid, n.title FROM {book} b INNER JOIN {node} n ON b.nid = n.nid WHERE b.mlid = :mlid", array(':mlid' => $mlid));
+        foreach ($result as $record) {
+          if ($record->nid != $gnid) {
+            $options[$record->nid] = str_replace(truncate_utf8($record->title, 30, TRUE, TRUE), $record->title, $title);
+          }
+        }
+
+      }
+    }
+    $form['field_toolkit_page']['und']['#options'] = $options;
+
+    $form['field_bundle_external_resources']['#suffix'] = _toolkits_resource_pages_list_publishers();
+  }
+}
+
+
+/**
+ * After-build function for field_toolkit_page to remove validation.
+ */
+function toolkits_resource_pages_remove_validation($form_element) {
+  // Unset validation, which causes error, for field_toolkit_page as long as a value is present
+  if (!empty($form_element['#value'])) {
+    unset($form_element['#needs_validation']);
+  }
+  return $form_element;
+}
+
+
+function _toolkits_resource_pages_list_publishers() {
+  $output = '<div style="margin-left: 1.5em; font-size: 0.9em">' . "\n";
+  $output .= '  <label class="option" for="find-publisher">' . variable_get('toolkits_resource_pages_publisher_label', 'Check if the publisher is among those that have already given consent to bundle resources:') . '</label><br \>';
+
+  $publishers = variable_get('toolkits_resource_pages_publishers', '');
+  $publishers = (!empty($publishers)) ? explode("\n", $publishers) : _toolkits_resource_pages_default_publishers();
+
+  $select = array(
+    '#title' => 'Publishers',
+    '#options' => $publishers,
+    '#name' => 'check_publishers',
+  );
+  $output .= theme('select', array('element' => $select));
+
+  $output .= '</div>';
+  return $output;
+}
+
+
+function _toolkits_resource_pages_default_publishers() {
+  $publishers = array(
+    "Abt Associates",
+    "Academic Journals",
+    "ACQUIRE Project",
+    "African Centre for Migration & Society",
+    "AfriComNet",
+    "Agency for Healthcare Research and Quality",
+    "AHEAD",
+    "AIDS Accountability International",
+    "AIDSinfo",
+    "AIDSTAR-One",
+    "AIDSTAR-Two",
+    "Alliance of Mayors and Municipal Leaders on HIV/AIDS in Africa",
+    "American College of Nurse-Midwives",
+    "amfAR",
+    "AMPATH",
+    "Anecdote",
+    "Aspen Institute",
+    "Association of African Universities",
+    "Association of Occupational and Environmental Clinics",
+    "Banyan Global",
+    "Basic Support for Institutionalizing Child Survival [BASICS]",
+    "Bill & Melinda Gates Foundation",
+    "BioMed Central",
+    "Bixby Center for Global Reproductive Health",
+    "Botswana Teen Club",
+    "Canadian Coalition for Global Health Research",
+    "Canadian Foundation for Healthcare Improvement",
+    "Capacity Plus",
+    "Capacity Project",
+    "CARE",
+    "Care Group Info",
+    "C-Change",
+    "CEDPA",
+    "CEI",
+    "Center for Global Development",
+    "Center for Health and Gender Equity",
+    "Center for International Earth Science Info Network",
+    "Center for Knowledge Societies",
+    "Center for Strategic & International Studies",
+    "Centers for Disease Control and Prevention [CDC]",
+    "Coastal Resources Center",
+    "Community-University Partnership for the Study of Children, Youth, and Families",
+    "Consortium for Service Innovation",
+    "Consortium for Street Children",
+    "CORE Group",
+    "Council for Global Equality",
+    "CORE Group",
+    "Council for Global Equality",
+    "Countdown to 2015: Maternal, Newborn & Child Health",
+    "Department for International Development [DFID]",
+    "Dtree International",
+    "Duke - Center for the Advancement of Social Entrepreneurship",
+    "Education International",
+    "Elizabeth Glaser Pediatric AIDS Foundation",
+    "Emergency Nutrition Network",
+    "EngenderHealth",
+    "Environmental Health at USAID",
+    "European Centre for Development Policy Management",
+    "Evidence for Action",
+    "ExpandNet",
+    "Extending Service Delivery Project",
+    "Family Care International",
+    "FANTA Project",
+    "FC2 Female Condom",
+    "FHI 360",
+    "FlexFund",
+    "Freedom from Hunger",
+    "Funders Concerned About AIDS",
+    "Futures Group",
+    "GALAEI",
+    "Gay Men's Health Crisis [GMHC]",
+    "Gender-based Violence Area of Responsibility Working Group",
+    "GHDonline",
+    "Global Development Research Center [GDRC]",
+    "Global Forum on MSM & HIV [MSMGF]",
+    "Global Health Communication",
+    "Governance, Social Development, Humanitarian, Conflict [GSDRC]",
+    "Guttmacher",
+    "Harvard Family Research Project",
+    "Health Care Improvement Project",
+    "Health Economics and HIV/AIDS Research Division",
+    "Health Informatics New Zealand",
+    "Health Innoventions",
+    "Health Systems Trust",
+    "HealthCare Waste Management",
+    "Hesperian",
+    "HLSP",
+    "Howard Brown Health Center",
+    "ICAP at Columbia University",
+    "icaso",
+    "iCohere",
+    "Institute for Reproductive Health at Georgetown University",
+    "Institute of Development Studies",
+    "Institute of Health Economics",
+    "Institute of Health Policy, Management & Evaluation - University of Toronto",
+    "Inter Press Service News Agency",
+    "Interagency Gender Working Group",
+    "Inter-Agency Standing Committee",
+    "Inter-agency Working Group on Reproductive Health in Crises",
+    "Interagency Youth Working Group",
+    "International AIDS Society",
+    "International Center for Research on Women",
+    "International Committee of the Red Cross",
+    "International Community of Women Living with HIV/AIDS",
+    "International Confederation of Midwives",
+    "International Consortium for Emergency Contraception",
+    "International Contraceptive Access [ICA] Foundation",
+    "International Council of Nurses",
+    "International Development Research Centre",
+    "International Federation of Library Associations",
+    "International Federation of Red Cross and Red Crescent Societies",
+    "International Gay & Lesbian Human Rights Commission",
+    "International HIV/AIDS Alliance",
+    "International Longevity Centre",
+    "International Planned Parenthood Federation",
+    "International Union for the Scientific Study of Population",
+    "International Youth Foundation",
+    "IntraHealth International",
+    "Ipas",
+    "Iron Deficiency Project Advisory Service",
+    "ITPCru",
+    "ITU",
+    "Japanese Organization for International Cooperation in Family Planning [JOICFP]",
+    "Jhpiego",
+    "Knoco Ltd",
+    "Kubatana.net",
+    "LINKAGES Project",
+    "Management Sciences for Health [MSH]",
+    "Management Systems International",
+    "Marie Stopes International",
+    "MCHIP",
+    "MEASURE DHS",
+    "Measurement, Learning & Evaluation [MLE] Project",
+    "Medecins Sans Frontieres",
+    "Medical Association of Thailand",
+    "mHealth Alliance",
+    "mHealthEd",
+    "Microcredit Summit Campaign",
+    "Microfinance Gateway",
+    "Millennium Challenge Corporation",
+    "Minnesota Department of Health",
+    "Mobile Monday",
+    "MTV Staying Alive",
+    "National Cancer Institute",
+    "NHS Library Services",
+    "OceanDocs",
+    "Ontario HIV Treatment Network",
+    "Overseas Development Institute",
+    "Pact",
+    "Pan Caribbean Partnership against HIV&AIDS",
+    "PATH",
+    "PATH Foundation Philippines",
+    "Pathfinder International",
+    "PLOS One",
+    "Population Action International",
+    "Population Council",
+    "Population Media Center",
+    "Population Reference Bureau",
+    "President's Emergency Plan for AIDS Relief [PEPFAR]",
+    "Primary Health Care Research & Information Service",
+    "PRIME II",
+    "Project Management Institute [PMI]",
+    "Project Modirisk",
+    "Projecting Girl Power",
+    "ProNutrition",
+    "PSI",
+    "Public Health Resource Unit",
+    "Realizing Rights",
+    "Reproductive Health Access Project",
+    "Reproductive Health Response in Crises Consortium",
+    "Reproductive Health Supplies Coalition",
+    "ReproLine Plus",
+    "RESPOND Project",
+    "Results-Based Financing for Health",
+    "Royal Holloway University of London",
+    "SAfAIDS",
+    "Save the Children",
+    "Southern African AIDS Trust",
+    "Southern African Regional Poverty Network",
+    "STEPS Centre",
+    "Strengthening Health Outcomes through the Private Sector [SHOPS] Project",
+    "Swiss Human Rights Book",
+    "Swiss TPH",
+    "Tearfund International Learning Zone",
+    "Text To Change",
+    "The BALANCED Project",
+    "The Carter Center",
+    "The Emergency Contraception Website",
+    "The Global Public-Private Partnership for Handwashing",
+    "The Hill Group",
+    "The Manoff Group",
+    "U.S. Agency for International Development [USAID]",
+    "U.S. Department of State",
+    "U.S. Food and Drug Administration",
+    "U.S. Global Health Initiative",
+    "U.S. Government Accountability Office [GAO]",
+    "UN Educational, Scientific and Cultural Organization",
+    "UN Sustainable Development",
+    "UNAIDS",
+    "UNFPA",
+    "UNICEF",
+    "United Nations",
+    "United Nations High Commissioner for Refugees [UNHCR]",
+    "United Nations Office on Drugs and Crime [UNODC]",
+    "University of Colorado",
+    "University of Illinois at Chicago",
+    "University of Southampton",
+    "University of Southampton Institutional Research Repository ePrints Soton",
+    "US Diplomatic Mission to South Africa",
+    "US Environmental Protection Agency [EPA]",
+    "USAID | DELIVER PROJECT",
+    "USAID | HEALTH POLICY INITIATIVE",
+    "USAID's Infant & Young Child Nutrition Project",
+    "Volunteers Overcoming Poverty",
+    "Washington University in St. Louis, Institute for Public Health",
+    "Water, Engineering and Development Centre - Loughborough University",
+    "WaterAid",
+    "Wilson Center",
+    "Women's Refugee Commission",
+    "World Alliance for Breastfeeding Action",
+    "World Bank",
+    "World Education",
+    "World Vision",
+    "World Wildlife Fund",
+    "Youth Action Net",
+    "Youth to Youth",
+  );
+  return $publishers;
+}

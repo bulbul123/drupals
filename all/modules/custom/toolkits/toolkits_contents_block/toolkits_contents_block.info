@@ -1,0 +1,7 @@
+name = Toolkits Contents Block
+description = Add the toolkit contents block
+package = Toolkits
+core = 7.x
+dependencies[] = og
+dependencies[] = og_context
+dependencies[] = og_blocks

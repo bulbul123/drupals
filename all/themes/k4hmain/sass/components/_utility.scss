@@ -1,0 +1,177 @@
+#utility {
+  background-color: $navy;
+  @include background($navy linear-gradient($navy, $navy-light));
+  border-bottom: solid 1px $navy-dark;
+  padding: 10px 0;
+  .toggle {
+    @include adjust-font-size-to(13px, 2);
+    @include link-colors($white, $blue-lighter);
+    display: none;
+    font-weight: bold;
+    padding-left: 10px;
+    //text-align: center;
+    text-decoration: none;
+    visibility: hidden;
+    span {
+      @include inline-block;
+      @include icon(0 -1452px);
+      padding-left: 30px;
+    }
+    &:hover {
+      span {
+        @include icon(0 -1492px);
+      }
+    }
+  }
+  a.hidden {
+    span {
+      @include icon(0 -1532px);
+    }
+    &:hover {
+      span {
+        @include icon(0 -1572px);
+      }
+    }
+  }
+}
+
+//Global Nav
+.menu-block-1 {
+  padding: 0 0 0 cp(24,$width-full);
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    li {
+      @include float-left;
+      margin: 0;
+      padding: 0 cp(40,$width-full) 0 0;
+      a {
+        @include adjust-font-size-to(15px);
+        @include float-left;
+        @include link-colors($blue-lighter, $white);
+        display: block;
+        font-weight: 600;
+        padding: 0 0 0 30px;
+        text-decoration: none;
+      }
+    }
+    // K4Health Link
+    li.menu-mlid-381 {
+      padding-right: cp(20,$width-full);
+      a {
+        //@include background(transparent image-url("icons_products-small.png") no-repeat 0 0);
+        @include float-left;
+        @include hide-text;
+        display: block;
+        height: 31px;
+        padding: 0;
+        width: 110px;
+      }
+    }
+  }
+  li.menu-mlid-381 a {  @extend .icon-product-k4health; }
+  li.popline a {        @extend .icon-product-popline; }
+  li.forums a {         @extend .icon-product-forums; }
+  li.toolkits a {       @extend .icon-product-toolkits; }
+  li.elearning a {      @extend .icon-product-elearning; }
+  li.photoshare a {     @extend .icon-product-photoshare; }
+  li.fp-handbook a {    @extend .icon-product-handbook; }
+  li.ghsp-journal a {    @extend .icon-product-ghsp-journal; }
+}
+
+@media screen and (max-width: 960px) {
+  #utility {
+    padding: 0;
+    .container {
+      //width: 100%;
+    }
+  }
+  #block-menu-block-1 {
+    padding-bottom: 36px;
+    position: relative;
+    .menu-block-1 {
+      //margin: 0 auto;
+      padding: 0;
+      //width: 200px;
+    }
+    .toggle {
+      bottom: 0;
+      clear: both;
+      display: block;
+      position: absolute;
+      visibility: visible;
+      width: 100%;
+    }
+  }
+  .menu-block-1 {
+    @include transition(height);
+    height: auto;
+    overflow: hidden;
+    &.hidden {
+      height: 0;
+    }
+    ul {
+      li,
+      li.menu-mlid-381 {
+        border-bottom: 1px solid $navy-dark;
+        clear: both;
+        display: block;
+        float: none;
+        padding-right: 20px;
+        padding: 5px 10px;
+        a {
+          float: none;
+          width: 100%;
+        }
+      }
+    }
+  }
+}
+
+#block-menu-block-7 {
+  float: left;
+  position: absolute;
+  right: 0;
+  margin-top: -3px;
+  text-align: center;
+  @include clearfix();
+  ul.menu {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    li.my-account {
+      line-height:1em;
+    }
+  }
+  a.sign-in,
+  a.sign-out {
+    @include adjust-font-size-to(13px,.8);
+    @include border-radius(24px);
+    @include box-shadow(#B3B7BD 0 -1px 0 0 inset,#ECEDEF 0 1px 0 0 inset);
+    background: none;
+    background-color: #E2E4E6;
+    @include background(image-url("icons.png") 4px -1700px no-repeat, linear-gradient(color_stops($white, #E2E4E6)));
+    @include text-shadow(rgba($white,0.9) 1px 1px 0);
+    @include link-colors($navy-light, $navy-darkest);
+    float: left;
+    font-weight: bold;
+    padding: 0 10px 0 28px;
+    text-decoration: none;
+    text-transform: uppercase;
+    &:hover{
+      background: none;
+      background-color: #CED1D3;
+      @include background(image-url("icons.png") 4px -1700px no-repeat, linear-gradient(color_stops($white, #CED1D3)));
+    }
+  }
+  a.my-account {
+    color: #eee;
+    text-decoration: none;
+    @include adjust-font-size-to(15px, .7);
+  }
+  @media screen and (max-width: 778px) {
+    bottom: 5px;
+    right: 10px;
+  }
+}

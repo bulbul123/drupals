@@ -1,0 +1,17 @@
+<?php 
+// 
+// function print_toc_preprocess(&$variables) {
+//   if (isset($variables['type']) && $variables['type'] == 'toolkit') {
+//     // dpm($variables);
+//     dpm(array_keys($variables));
+//     $variables['view_mode'] = 'table_of_contents';
+//   }
+// }
+
+// function print_toc_node_view_alter($build) {
+//   var_dump('test');exit;
+// }
+// 
+// function print_toc_entity_view($entity, $type, $view_mode, $langcode) {
+//   var_dump('test');exit;
+// }

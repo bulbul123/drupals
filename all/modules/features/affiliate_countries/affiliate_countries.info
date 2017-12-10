@@ -1,0 +1,17 @@
+name = Affiliate Countries
+description = Countries list for various content types.
+core = 7.x
+package = Features
+php = 5.2.4
+version = 7.x-1.3
+dependencies[] = affiliate_countries_extra
+dependencies[] = features
+dependencies[] = strongarm
+dependencies[] = taxonomy
+features[ctools][] = strongarm:strongarm:1
+features[features_api][] = api:1
+features[taxonomy][] = countries
+features[user_permission][] = delete terms in 4
+features[user_permission][] = edit terms in 4
+features[variable][] = pathauto_taxonomy_term_countries_pattern
+mtime = 1461345980

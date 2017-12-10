@@ -1,0 +1,157 @@
+//Blog List
+
+.blog-list { 
+  .item-list > ul{
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    li.views-row {
+      border-top: solid 1px $gray-light;
+      margin: 0;
+      padding: 12px cp(50,$width-content) 10px cp(50,$width-content);
+      @include clearfix;
+      &.first {
+        //border: none;
+      }
+    }
+  }
+}
+
+.page-blog .blog-list ul li.views-row-first {
+  border: none;
+}
+
+.node-type-blog-post .view-mode-full .field-name-body {
+  clear: both;
+}
+
+.blog-list,
+.node-blog-post {
+  .field-name-field-blog-series {
+    @include float-left;
+    @include adjust-font-size-to(16px);
+    @include icon(0 -240px);
+    margin: 0 0 12px cp(-72,$width-content);
+    padding: 0 0 0 cp(72,$width-content);
+  }
+  .field-name-post-date {
+    @include float-right;
+    @include adjust-font-size-to(16px);
+    @include icon(0 -196px);
+    margin-bottom: 12px;
+    padding-left: 20px;
+  }
+  .field-name-field-preview-image {
+    clear: both;
+    margin-bottom: $base-line-height;
+    img {
+      @extend .image-shadow;
+    }
+  }
+  .contributor-info {
+    clear: both;
+    margin-bottom: $base-line-height;
+    .photo {
+      @include float-left;
+      margin-right: 8px;
+      width: 36px;
+      img {
+        display: block;
+      }
+    }
+    h3.name {
+      @include adjust-font-size-to(15px, .5);
+      margin: 0;
+      padding-top: 2px;
+      a {
+        text-decoration: none;
+      }
+    }
+    .organization-title {
+      @include adjust-font-size-to(14px, .7);
+      color: $gray-dark;
+    }
+  }
+  h1.page-title {
+    clear: both;
+    margin-left: 0;
+    margin-right: 0;
+  }
+  h2 {
+    @extend .ff-serif;
+    @include adjust-font-size-to(24px, 1);
+    clear: both;
+    margin-bottom: $base-line-height;
+    a {
+      @include link-colors($red, $red-dark);
+      display: block;
+      text-decoration: none;
+    }
+  }
+  .post-utilities {
+    @include legacy-pie-clearfix;
+    float: left;
+    width: 100%;
+    .field {
+      //display: inline-block;
+      display: inline;
+      float: left;
+      margin: 0 cp(30,$width-content) $base-line-height 0;
+    }
+  }  
+}
+
+.blog-list,
+.node-blog-post {
+  ul.tags {
+    clear: both;
+    @include legacy-pie-clearfix;
+    @include adjust-font-size-to(14px, .7);
+    margin: 0;
+    padding: 0 0 0 22px;
+    li {
+      @include float-left;
+      border: none;
+      margin: 0;
+      padding: 0 18px 0 0;
+      &:first-child,
+      &.first {
+        @include icon(0 -278px);
+        margin-left: -22px;
+        padding-left: 22px;
+      }
+      a {
+        text-decoration: none;
+        font-weight: 600;
+      }
+    }
+  }
+}
+
+.field-name-field-tags {
+  clear: both;
+  @include legacy-pie-clearfix;
+  @include adjust-font-size-to(16px, .7);
+  margin: 0 0 $base-line-height;
+  padding: 0 0 0 22px;
+  .field-items {
+    @include float-left;
+  }
+  .field-item {
+    @include float-left;
+    border: none;
+    margin: 0;
+    padding: 0 18px 0 0;
+    &:first-child {
+      @include icon(0 -278px);
+      margin-left: -22px;
+      padding-left: 22px;
+    }
+    a {
+      text-decoration: none;
+      font-weight: 600;
+    }
+  }
+}
+
+//  Featured Series

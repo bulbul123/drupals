@@ -1,0 +1,29 @@
+.broken-link {
+  background: #444;
+  color: white;
+}
+
+.broken-link--110 {
+  background: #444;
+  color: white;
+}
+
+.broken-link-0 {
+  background: #c00;
+  color: white;
+}
+
+.broken-link-301 {
+  background: #06d;
+  color: white;
+}
+
+.broken-link-403 {
+  background: black;
+  color: #f33;
+}
+
+.broken-link-404 {
+  background: #c00;
+  color: white;
+}

@@ -1,0 +1,44 @@
+<?php 
+
+/**
+ * Hide the print links
+ * 
+ * The print links are added to the sidebar to 
+ */
+function toolkits_print_link_node_view_alter(&$build) {
+  if ($build['#bundle'] == 'toolkit' && isset($build['body']) && $build['body']['#object']->type == 'toolkit') {
+    unset($build['links']['print_pdf']);
+    unset($build['links']['book']['#links']['book_printer']);
+  }
+  
+  if ($build['#bundle'] == 'toolkit_page' && $build['#node']->type == 'toolkit_page') {
+    unset($build['links']['print_pdf']);
+  }
+}
+
+// function toolkits_print_link_node_view_alter(&$build) {
+//   if ($build['#bundle'] == 'toolkit' && $build['body']['#object']->type == 'toolkit') {
+//     $build['links']['toc'] = array(
+//       '#theme' => 'link',
+//       '#links' => array(
+//         // 'toc' => array(
+//         //   'href' => 'print/'. $build['body']['#object']->nid .'/table_of_contents',
+//         //   'title' => 'Table of Contents',
+//         //   'attributes' => array(
+//         //     'rel' => 'nofollow',
+//         //   ),
+//         //   'html' => false,
+//         // ),
+//         'toc_pdf' => array(
+//           'href' => 'printpdf/'. $build['body']['#object']->nid .'/table_of_contents',
+//           'title' => 'PDF Table of Contents',
+//           'attributes' => array(
+//             'rel' => 'nofollow',
+//           ),
+//           'html' => false,
+//         ),
+//       ),
+//     );
+//     
+//   }
+// }

@@ -1,0 +1,825 @@
+<?php
+
+//module_load_include('inc', 'google_analytics_reports_api', 'google_analytics_reports.pages');
+
+/**
+ * Implementation of hook_menu().
+ *
+ * Add menu item for group analytics report.
+ *
+ * @return
+ *   Returns new menu items.
+ */
+function og_analytics_menu() {
+  global $user;
+
+  // og_analytics_google_analytics_reports_summary_page
+  if (module_exists('google_analytics_reports')) {
+    $items['node/%/reports/google-analytics'] = array(
+      'title' => 'Google Analytics Summary',
+      'description' => "View a traffic report for your group.",
+      //'page callback' => 'og_analytics_google_analytics_reports_summary_page',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('og_analytics_google_analytics_date_form', 1),
+      'access callback' => 'og_analytics_access_report',
+      'access arguments' => array(1),
+      'type' => MENU_LOCAL_TASK,
+    );
+    $items['og_analytics_printpdf'] = array(
+      'title' => 'Printer-friendly PDF',
+      'page callback' => 'og_analytics_print_pdf_controller',
+      'access arguments' => array('access PDF version'),
+      'type' => MENU_CALLBACK,
+      'file' => 'og_analytics_print_pdf.inc',
+    );
+  }
+
+  return $items;
+}
+
+
+/**
+ * Page callback for admin/reports/google-analytics.
+ *
+ * @return An HTML summary of the site-wide statistics.
+ */
+function og_analytics_google_analytics_reports_summary_page($group_nid, $start = '-31 days', $end = '-1 day') {
+  if (!variable_get('google_analytics_reports_api_oauth_token', FALSE)) {
+    drupal_set_message(t('You must <a href="!url">authorize</a> Drupal to use your Analytics account before you can view reports.', array('!url' => url('admin/config/system/google-analytics-reports-api'))), 'warning');
+    return ' ';
+  }
+
+  $output = '';
+  $path = drupal_get_path_alias('node/' . $group_nid);
+  $summary = array(
+    'visit_chart' => _og_analytics_google_analytics_reports_visits($path, $start, $end),
+    'usage' => _og_analytics_google_analytics_reports_usage($path, $start, $end),
+    'pages' => _og_analytics_google_analytics_reports_top_pages($path, $start, $end),
+    'referrals' => _og_analytics_google_analytics_reports_top_referrals($path, $start, $end),
+//    'searches' => _og_analytics_google_analytics_reports_top_searches($path, $start, $end),
+    'countries' => _og_analytics_google_analytics_reports_countries($path, $start, $end),
+//    'countries_list' => _og_analytics_google_analytics_reports_countries_list($path, $start, $end),
+    'source_types' => _og_analytics_google_analytics_reports_source_types($path, $group_nid, $start, $end),
+    'keywords' => _og_analytics_reports_top_keywords($path, $start, $end),
+    'allpageviews' => _og_analytics_google_analytics_reports_pageviews($path, $group_nid, $start, $end),
+//    'keywords' => _google_analytics_reports_top_keywords($path),
+//    'filters' => _google_analytics_reports_path_filter($path),
+//    'filters' => 'ga:pagePath=~^' . preg_quote($path) . '.*',
+    'filters' => 'ga:pagePath=~^/' . preg_quote($path),
+    'start_date' => $start,
+    'end_date' => $end,
+  );
+
+  if (in_array(FALSE, $summary, TRUE)) {
+    $menu_item = menu_get_item();
+    if ($menu_item['href'] == 'admin/reports/google-analytics') {
+      drupal_set_message(_google_analytics_reports_api_error_message(), 'error');
+      return ' ';
+    }
+    else {
+
+    }
+    $return = "<h2>Google Analytics Summary is currently unavailable.</h2><p>If you need an analytics report, please contact <a href='mailto:elizabeth.tully@jhu.edu'>Liz Tully directly</a>.</p>";
+    return $return . '<p>' . _google_analytics_reports_api_error_message() . '</p>';
+  }
+
+  $output .= theme('og_analytics_reports_summary', $summary);
+
+//  return theme('google_analytics_reports_summary', $summary);
+  return $output;
+}
+
+
+/**
+ * Form definition for report datepicker.
+ */
+function og_analytics_google_analytics_date_form($group_nid, &$form_state) {
+  $form = array();
+  $group_nid = (empty($group_nid)) ? arg(1) : $group_nid;
+
+  // Add textfields to form for start and end dates
+  $form['start_date'] = array(
+    '#type' => 'date_popup',
+    '#title' => t('Start Date'),
+    '#description' => t('Select a start date for report data.'),
+    '#date_label_position' => 'within',
+    '#date_format' => 'm/d/Y',
+    '#date_year_range' => '-3:+3',
+  );
+
+  $form['end_date'] = array(
+    '#type' => 'date_popup',
+    '#title' => t('End Date'),
+    '#description' => t('Select an end date for report data (no longer than a year).'),
+    '#date_label_position' => 'within',
+    '#date_format' => 'm/d/Y',
+    '#date_year_range' => '-3:+3',
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    //'#weight' => 50,
+    '#attributes' => array('class' => array('ogt-analytics-submit')),
+    '#ajax' => array(
+      'callback' => 'og_analytics_google_analytics_date_form_submit',
+      'wrapper' => 'report',
+      'name' => 'submit1',
+    ),
+    '#value' => t('Change Report Dates'),
+  );
+
+  if (isset($form_state['values']['start_date'])) {
+    $report = og_analytics_google_analytics_reports_summary_page($group_nid, $start = $form_state['values']['start_date'], $end = $form_state['values']['end_date']);
+  } else {
+    $report = og_analytics_google_analytics_reports_summary_page($group_nid, $start = '-31 days', $end = '-1 day');
+  }
+  $form['report'] = array(
+    '#type' => 'markup',
+    '#prefix' => '<div id = "report">',
+    '#suffix' => '</div>',
+    '#markup' => $report,
+  ); 
+  $form['#submit'] = array('og_analytics_google_analytics_date_form_submit');
+  return $form;
+}
+
+
+/**
+ * Renders an img element with a chart of the number of visits over the past 30 days.
+ */
+function _og_analytics_google_analytics_reports_visits($path, $start = '-31 days', $end = '-1 day') {
+  $params = array(
+    'metrics' => array('ga:sessions'),
+    'dimensions' => array('ga:date'),
+    'sort_metric' => array('ga:date'),
+    'start_date' => strtotime($start),
+    'end_date' => strtotime($end),
+//    'filters' => _google_analytics_reports_path_filter($path),
+    'filters' => 'ga:pagePath=~^/' . preg_quote($path),
+  );
+  $feed = google_analytics_reports_api_report_data($params);
+  if ($feed->error) {
+    return FALSE;
+  }
+  $max_visits = 0;
+  $labels = array();
+
+  // We need to supply a few data points on the chart, but not all
+  $count = count($feed->results->rows);
+  if ($count <= 35) {
+    $mod = 10;
+  } else {
+    $mod = 20;
+  }
+  $data_point_count = 0;
+  $multiples_of = round($count/$mod);
+  foreach ($feed->results->rows as $row) {
+    $data[$row['date']] = $row['sessions'];
+    $max_visits = max($row['sessions'], $max_visits);
+/* Not using labels are data point markers for now
+    $opt = array('#opt_which_points' => -1);
+    $markers[] = array_merge(chart_shape_marker(0, $row['visits'], 's', 10, '6896C8'), $opt);
+//    $markers[] = chart_shape_marker(0, $row['visits'], 's', 10, 'ff0000');
+*/
+    $data_point_count++;
+    if (fmod($row['date'], $mod) == 0 && ($data_point_count === 1 || $data_point_count % $multiples_of == 0)) {
+      if (strlen($row['date']) === 8) { // This is a date in the yyyymmdd format
+        $date = str_split($row['date'], 2);
+//      $display_date = $date[2] . '/' . $date[3] . ' (' . $row['visits'] . ')';
+        $display_date = $date[2] . '/' . $date[3];
+      } else { // This is likely a timestamp, so handle differently
+        $display_date = date('m/d', $row['date']);
+      }
+      $lables[CHART_AXIS_X_BOTTOM][0][] = chart_mixed_axis_label(t(' '));
+      $lables[CHART_AXIS_X_BOTTOM][1][] = chart_mixed_axis_label($display_date);
+//    $lables[CHART_AXIS_Y_LEFT][0][] = chart_mixed_axis_label($row['visits'], $i * 10);
+    }
+  }
+  $lables[CHART_AXIS_Y_LEFT][0][] = chart_mixed_axis_label(0);
+  $lables[CHART_AXIS_Y_LEFT][0][] = chart_mixed_axis_label($max_visits / 2);
+  $lables[CHART_AXIS_Y_LEFT][0][] = chart_mixed_axis_label($max_visits);
+  $lables[CHART_AXIS_Y_LEFT][1][] = chart_mixed_axis_label(t(' '));
+  $lables[CHART_AXIS_Y_LEFT][1][] = chart_mixed_axis_label(t('Sessions'));
+  $lables[CHART_AXIS_Y_LEFT][1][] = chart_mixed_axis_label(t(' '));
+  $chart = array(
+    '#chart_id' => 'visits_large_30d',
+    '#data' => $data,
+    //'#title' => 'Visits!',
+    '#type' => CHART_TYPE_LINE . ':nda',
+    '#size' => chart_size(1000, 120),
+/* Not using labels are data point markers for now
+    '#shape_markers' => $markers,
+//    '#labels' => $data,
+*/
+    '#mixed_axis_labels' => $lables,
+    '#adjust_resolution' => TRUE,
+    '#data_colors' => array('AAAAAA'),
+    '#chart_fill' => chart_fill('bg', '00000000'),
+    //'#shape_markers' => array(chart_shape_marker(0, 0, 'B', 0, $color = 'EEEEEE')),
+    '#line_styles' => array(chart_line_style(2, 10, 0)),
+  );
+
+  // Figure out date span and if too big to render days in the chart we'll switch to weeks.
+  $first_day = reset($feed->results->rows);
+  $last_day = end($feed->results->rows);
+  $date_span = $last_day['date'] - $first_day['date'];
+  if ($date_span > 10000) {
+//    unset($chart['#mixed_axis_labels'][CHART_AXIS_X_BOTTOM]);
+    $weeks = array_chunk($chart['#data'], 7, TRUE);
+    $chart['#data'] = NULL;
+    foreach ($weeks as $week) {
+      $i = 0;
+      $key = '';
+      foreach ($week as $date => $num_visits) {
+        if ($i == 0) {
+          $key = $date;
+        }
+        $chart['#data'][$key] += $num_visits;
+        $i++;
+      }
+    }
+    $max_week_visits = max($chart['#data']);
+    $last_week_visits = end($chart['#data']);
+  }
+
+  $yesterday = ($last_day['sessions'] == 1) ? 'there was @yesterday session.' : 'there were @yesterday sessions.';
+  $title = ($date_span > 10000) ? t('The most sessions in a single week was @maxweek. The last week there were @last sessions (the last week may not be a complete 7 day week).', array('@maxweek' => $max_week_visits, '@last' => $last_week_visits)) : t('The most sessions on a single day was @max.  Yesterday ' . $yesterday, array('@max' => $max_visits, '@yesterday' => $last_day['sessions']));
+  $chart['#title'] = $title;
+  $chart['#attributes'] = array('title' => $title, 'style' => 'height: ' . $chart['#size']['#height'] . 'px; width:100%;');
+//  $output = drupal_get_form('og_analytics_print_form', $start, $end);
+  $nid = arg(1);
+  if (!is_numeric($nid)) {
+    $drupal_path = explode('/', drupal_get_normal_path($path));
+    $nid = $drupal_path[1];
+  }
+  $output = l(t('Print'), 'og_analytics_printpdf/node/' . $nid . '/reports/google-analytics/print&start=' . $start . '&end=' . $end . '&nid=' . arg(1), array('attributes' => array('class' => array('print-link'))));
+  $output .= theme('chart', array('chart' => $chart));
+  $output .= "<div class='report-hidden'>$title</div>";
+
+//  $output = '';
+//  $output .= chart_render($chart, array('title' => $title, 'style' => 'height:' . $chart['#size']['#height'] . 'px; width:100%'));
+  return $output;
+}
+
+
+/**
+ * Retrieves usage data.
+ */
+function _og_analytics_google_analytics_reports_usage($path, $start = '-31 days', $end = '-1 day') {
+  // Site usage.
+  $params = array(
+    'metrics' => array(
+      'ga:sessions',
+      'ga:bounces',
+      'ga:entrances',
+      'ga:pageviews',
+      'ga:sessionDuration',
+      'ga:newUsers',
+    ),
+    'start_date' => strtotime($start),
+    'end_date' => strtotime($end),
+//    'filters' => _google_analytics_reports_path_filter($path),
+    'filters' => 'ga:pagePath=~^/' . preg_quote($path),
+  );
+  $feed = google_analytics_reports_api_report_data($params);
+  if ($feed->error) {
+    return FALSE;
+  }
+  return $feed->results->totalsForAllResults;
+}
+
+
+/**
+ * Retrieves country data for pie chart.
+ */
+function _og_analytics_google_analytics_reports_countries($path, $start = '-31 days', $end = '-1 day') {
+  // Site visitors by country
+  $params = array(
+    'metrics' => array('ga:sessions'),
+    'dimensions' => array('ga:country'),
+    'sort_metric' => array('-ga:sessions'),
+    'start_date' => strtotime($start),
+    'end_date' => strtotime($end),
+//    'filters' => _google_analytics_reports_path_filter($path),
+    'filters' => 'ga:pagePath=~^/' . preg_quote($path),
+  );
+  $feed = google_analytics_reports_api_report_data($params);
+  if ($feed->error) {
+    return FALSE;
+  }
+
+  $data = _og_analytics_countries();
+  foreach ($feed->results->rows as $row) {
+    if (isset($row['country'])) {
+      $data[$row['country']] += $row['sessions'];
+    }
+  }
+  foreach ($data as $k => $v) {
+    if ($v === 0) {
+      unset($data[$k]);
+    }
+  }
+  arsort($data);
+  $top_data = array_slice($data, 0, 20);
+  $sources = array();
+  foreach ($top_data as $country => $sessions) {
+    $sources[] = ($sessions == 1) ? $sessions . ' session from ' . $country : $sessions . ' sessions from ' . $country;
+  }
+  $title = t("Top 20 countries visiting:\n" . implode(",\n", $sources));
+
+  $chart = array(
+    '#chart_id' => 'countries_large_30d',
+    '#data' => $top_data,
+//    '#type' => CHART_TYPE_BAR_V_GROUPED,
+    '#type' => CHART_TYPE_PIE,
+    '#size' => chart_size(800, 300),
+    '#grid_lines' => chart_grid_lines(30, 15),
+//    '#bar_size' => chart_bar_size(15, 5),
+    '#legends' => array_keys($top_data),
+    '#adjust_resolution' => TRUE,
+    //'#data_colors' => array('3366CC', '990099', '109618', 'FF9900', 'DC3912', '00ff00', '009900', '003300', 'ff0000', '990000', '330000', '0000ff', '000099', '000033'),
+    //'#data_colors' => array('FF9900', 'FF0000', 'DC3912', '990099', '990000', '3366CC', '109618', '00ff00', '009900', '003300', '0000ff', '000099'),
+    '#data_colors' => array('8ae234', '73d216', '4e9a06', '729fcf', '3465a4', '204a87', 'ad7fa8', '75507b', '5c3566', 'ef2929', 'cc0000', 'a40000', 'fce94f', 'edd400', 'c4a000', 'fcaf3e', 'f57900', 'ce5c00', 'e9b96e', 'c17d11', '8f5902'),
+    //'#data_colors' => array('00ff00', '009900', '003300', 'ff0000', '990000', '330000', '0000ff', '000099', '000033'),
+    '#chart_fill' => chart_fill('bg', '00000000'),
+    '#shape_markers' => array(chart_shape_marker(0, 0, 'B', 0, $color = 'EEEEEE')),
+    '#line_styles' => array(chart_line_style(2, 10, 0)),
+    '#max_results' => 10,
+  );
+//  foreach ($data as $k => $v) {
+//    $chart['#data_colors'][] = chart_unique_color($k);
+//  }
+  $last_day = end($feed->results->rows);
+  $chart['#title'] = $title;
+  $chart['#attributes'] = array('title' => $title, 'style' => 'height:' . $chart['#size']['#height'] . 'px; width:100%');
+  $output = theme('chart', array('chart' => $chart));
+  $output .= "<div class='report-hidden'>$title</div>";
+  return $output;
+}
+
+
+/**
+ * Retrieves country data for full list.
+ */
+function _og_analytics_google_analytics_reports_countries_list($path, $start = '-31 days', $end = '-1 day') {
+  // Site visitors by country
+  $params = array(
+    'metrics' => array('ga:sessions'),
+    'dimensions' => array('ga:country'),
+    'sort_metric' => array('-ga:sessions'),
+    'start_date' => strtotime($start),
+    'end_date' => strtotime($end),
+//    'filters' => _google_analytics_reports_path_filter($path),
+    'filters' => 'ga:pagePath=~^/' . preg_quote($path),
+  );
+  $feed = google_analytics_reports_api_report_data($params);
+  if ($feed->error) {
+    return FALSE;
+  }
+  return $feed->results->rows;
+
+  $rows = array();
+  foreach ($feed->results as $result) {
+    $rows[] = array(t($result->country), $result->sessions);
+  }
+  $header = array('Country', 'Sessions');
+  return theme('table', $header, $rows);
+}
+
+
+/**
+ * Retrieves top pages.
+ */
+function _og_analytics_google_analytics_reports_top_pages($path, $start = '-31 days', $end = '-1 day') {
+  $params = array(
+    'metrics' => array('ga:pageviews'),
+    'dimensions' => array('ga:pageTitle', 'ga:hostname', 'ga:pagePath'),
+    'sort_metric' => array('-ga:pageviews'),
+    'start_date' => strtotime($start),
+    'end_date' => strtotime($end),
+    'sort' => '-ga:pageviews',
+    'max_results' => 10,
+//    'filters' => _google_analytics_reports_path_filter($path),
+    'filters' => 'ga:pagePath=~^/' . preg_quote($path),
+  );
+  $feed = google_analytics_reports_api_report_data($params);
+  if ($feed->error) {
+    return FALSE;
+  }
+  return $feed->results->rows;
+
+  $rows = array();
+  foreach ($feed->results as $result) {
+    $rows[] = array(l(t($result->pageTitle), $result->pagePath), $result->pageviews);
+  }
+  $header = array('Page', 'Views');
+  return theme('table', $header, $rows);
+}
+
+
+/**
+ * Retrieves top referrals.
+ */
+function _og_analytics_google_analytics_reports_top_referrals($path, $start = '-31 days', $end = '-1 day') {
+  $params = array(
+    'metrics' => array('ga:sessions'),
+    'dimensions' => array('ga:source', 'ga:medium'),
+    'sort_metric' => array('-ga:sessions'),
+    'filters' => 'ga:medium==referral',
+    'start_date' => strtotime($start),
+    'end_date' => strtotime($end),
+    'max_results' => 10,
+    'filters' => 'ga:pagePath=~^/' . preg_quote($path),
+  );
+  if ($path) {
+//    $params['filters'] .= ';' . _google_analytics_reports_path_filter($path);
+  }
+  $feed = google_analytics_reports_api_report_data($params);
+  if ($feed->error) {
+    return FALSE;
+  }
+  return $feed->results->rows;
+}
+
+/**
+ * Retrieves top searches.
+ */
+function _og_analytics_google_analytics_reports_top_searches($path = '', $start = '-31 days', $end = '-1 day') {
+  $params = array(
+    'metrics' => array('ga:sessions'),
+    'dimensions' => array('ga:keyword'),
+    'sort_metric' => array('-ga:sessions'),
+    'start_date' => strtotime($start),
+    'end_date' => strtotime($end),
+//    'filters' => 'ga:keyword!=(not set)',
+    'max_results' => 10,
+    'filters' => 'ga:pagePath=~^/' . preg_quote($path),
+  );
+  if ($path) {
+//    $params['filters'] .= ';' . 'ga:pagePath=@' . preg_quote($path);
+  }
+  $feed = google_analytics_reports_api_report_data($params);
+  if ($feed->error) {
+    return FALSE;
+  }
+  $rows = array();
+  foreach ($feed->results as $result) {
+    $rows[] = array(t($result->keyword), $result->sessions);
+  }
+  $header = array('Page', 'Views');
+  return theme('table', $header, $rows);
+}
+
+
+/**
+ * Retrieves top keywords.
+ */
+function _og_analytics_reports_top_keywords($path = '', $start = '-31 days', $end = '-1 day') {
+  $params = array(
+    'metrics' => array('ga:sessions'),
+    'dimensions' => array('ga:keyword'),
+    'sort_metric' => array('-ga:sessions'),
+    'start_date' => strtotime($start),
+    'end_date' => strtotime($end),
+    'filters' => 'ga:keyword!=(not set)',
+    'filters' => 'ga:pagePath=~^/' . preg_quote($path),
+    'max_results' => 10,
+  );
+  if ($path) {
+//    $params['filters'] .= ';' . _google_analytics_reports_path_filter($path);
+  }
+  $feed = google_analytics_reports_api_report_data($params);
+  if ($feed->error) {
+    return FALSE;
+  }
+  return $feed->results->rows;
+/*  $rows = array();
+  foreach ($feed->results as $result) {
+    foreach ($result as $id => $row) {
+      if (is_array($row) && is_int($id)) {
+    $rows[] = array(t($row['keyword']), $row['visits']);
+      }
+    }
+  }
+//dpr($rows);
+  $header = array('Keyword', 'Visits');
+  return theme('table', $header, $rows);
+*/
+}
+
+
+function _og_analytics_google_analytics_reports_source_types($path, $group_nid, $start = '-31 days', $end = '-1 day') {
+  $params = array(
+    'metrics' => array('ga:sessions'),
+    'dimensions' => array('ga:source', 'ga:medium'),
+    'sort_metric' => array('-ga:sessions'),
+    'filters' => 'ga:medium==referral',
+    'start_date' => strtotime($start),
+    'end_date' => strtotime($end),
+    'max_results' => 10,
+    'filters' => 'ga:pagePath=~^/' . preg_quote($path),
+  );
+  $feed = google_analytics_reports_api_report_data($params);
+  if ($feed->error) {
+    return FALSE;
+  }
+  $data = array('organic' => 0, 'direct' => 0, 'referral' => 0);
+  foreach ($feed->results->rows as $row) {
+    if ($row['medium'] == '(none)') {
+      $row['medium'] = 'direct';
+    }
+    $data[$row['medium']] += $row['sessions'];
+  }
+  arsort($data);
+  $sources = array();
+  foreach ($data as $medium => $sessions) {
+    $sources[] = ($sessions == 1) ? $sessions . ' session from ' . $medium : $sessions . ' sessions from ' . $medium;
+  }
+  $title = t(implode(', ', $sources));
+
+  $chart = array(
+    '#chart_id' => 'source_types_large_30d',
+    '#data' => $data,
+    '#type' => CHART_TYPE_PIE,
+    '#size' => chart_size(800, 250),
+    '#grid_lines' => chart_grid_lines(30, 15),
+    '#legends' => array_keys($data),
+    '#adjust_resolution' => TRUE,
+//    '#data_colors' => array('00ff00', '009900', '003300', 'ff0000', '990000', '330000', '0000ff', '000099', '000033'),
+    '#data_colors' => array('3366CC', '990099', '109618', 'FF9900', 'DC3912'),
+    '#chart_fill' => chart_fill('bg', '00000000'),
+    '#shape_markers' => array(chart_shape_marker(0, 0, 'B', 0, $color = 'EEEEEE')),
+    '#line_styles' => array(chart_line_style(2, 10, 0)),
+    '#max_results' => 10,
+  );
+  $last_day = end($feed->results->rows);
+  $chart['#title'] = $title;
+  $chart['#attributes'] = array('title' => $title, 'style' => 'height:' . $chart['#size']['#height'] . 'px; width:100%');
+  $output = theme('chart', array('chart' => $chart));
+  $output .= "<div class='report-hidden'>$title</div>";
+  return $output;
+}
+
+/**
+ * Retrieves full list of pageviews.
+ */
+function _og_analytics_google_analytics_reports_pageviews($path, $group_nid, $start = '-31 days', $end = '-1 day') {
+  $paths = array();
+  $source_paths = db_query("SELECT CONCAT('node/', n.nid) AS Path, n.title FROM og_membership ogm INNER JOIN node n ON ogm.etid = n.nid INNER JOIN og ON ogm.gid = og.gid WHERE og.etid = $group_nid AND n.status = 1 AND n.type NOT IN ('toolkit_collaborator') ORDER BY n.title ASC")->fetchAll();
+  foreach ($source_paths as $this_path) {
+    $paths[] = array('pagePath' => '/' . drupal_lookup_path('alias', $this_path->Path), 'pageTitle' => $this_path->title);
+  }
+
+  $params = array(
+    'metrics' => array('ga:pageviews'),
+    'dimensions' => array('ga:pageTitle', 'ga:hostname', 'ga:pagePath'),
+    'sort_metric' => array('ga:pageviews'),
+    'start_date' => strtotime($start),
+    'end_date' => strtotime($end),
+    'sort' => 'ga:pageviews',
+    'max_results' => (count($paths) * 3),
+    'filters' => 'ga:pagePath=~^/' . preg_quote($path),
+  );
+  $feed = google_analytics_reports_api_report_data($params);
+  if ($feed->error) {
+    return FALSE;
+  }
+
+  $ga_paths = array();
+  $exempt_paths = array('about', 'sitemap');
+  foreach ($feed->results->rows as $row) {
+    $ga_paths[] = $row['pagePath'];
+    if (!in_array($row['pagePath'], $exempt_paths)) {
+      $ga_rows[] = $row;
+    }
+  }
+
+  $rows = array();
+//print "Toolkit Paths from DB\n";
+  $zero_paths = array();
+  foreach ($paths as $key => $path) {
+    if (!in_array($path['pagePath'], $ga_paths)) {
+//      print $path['pagePath'] . " - 0 hits\n";
+      $zero_paths[] = array_merge($path, array('pageviews' => 0, 'hostname' => 'www.k4health.org'));
+    }
+  }
+
+  $merged = array_merge($zero_paths, $ga_rows);
+  foreach ($merged as $result) {
+    $rows[] = array(l(t($result['pageTitle']), $result['pagePath']), l(t($result['pagePath']), $result['pagePath']), $result['pageviews']);
+  }
+//print count($zero_paths) . ' ' . count($ga_rows);
+
+  $header = array('Page', 'Path', 'Views');
+  return  '<div class="more-less"><div class="more-block">' . theme('table', array('header' => $header, 'rows' => $rows)) . '</div></div>'; 
+}
+
+function og_analytics_google_analytics_date_form_submit(&$form, $form_state) {
+//  dpr($form_state);
+//  exit();
+  $start = '-' . og_analytics_google_analytics_time_ago($form_state['values']['start_date']);
+  $end = '-' . og_analytics_google_analytics_time_ago($form_state['values']['end_date']);
+  $group_nid = $form_state['build_info']['args'][0];
+
+  $element = $form['report'];
+  $element['#markup'] = og_analytics_google_analytics_reports_summary_page($group_nid, $start = $form_state['values']['start_date'], $end = $form_state['values']['end_date']);
+  return $element;
+
+  // If we get this far, it was not a jQuery call, so process normally
+  drupal_goto('node/196/reports/google-analytics/' . $start . '/' . $end);
+}
+
+function og_analytics_google_analytics_time_ago($date, $time = 0) {
+  $days = abs(ceil((strtotime($date)-strtotime("now"))/86400));
+  if ($days > 0)  $timepast = $days." days";
+  if ($days == 1)  $timepast = $days." day";
+  $hours = abs(ceil((strtotime($time)-strtotime("now"))/3600));
+  if ($days == 0) $timepast = "about ".$hours." hours";
+  if ($hours == 1) $timepast = "about ".$hours." hour";
+  $minutes = abs(ceil((strtotime($time)-strtotime("now"))/60))-($hours*60);
+  if ($hours == 0) $timepast = $minutes." minutes";
+  if ($minutes == 1) $timepast = $minutes." minute";
+  return $timepast;
+}
+
+function og_analytics_access_report($nid) {
+  global $user;
+  if (arg(3) == 'google-analytics') {
+    return TRUE;
+  }
+  $entity_type = 'node';
+  // node and group node nids are both being passed in, so let's
+  // make sure we have the real one
+  $real_args = explode('/', drupal_get_normal_path(ltrim($_SERVER['REQUEST_URI'], '/')));
+  if (isset($real_args[1]) && (!$nid || $real_args[1] != $nid)) {
+    $nid = $real_args[1];
+  }
+  $entity = entity_object_load($nid, $entity_type);
+  list(, , $bundle) = entity_extract_ids($entity->type, $entity);
+  $is_group = og_is_group_type($entity_type, $bundle);
+  if (!$is_group) {
+    return FALSE;
+  } 
+  if (user_access('access google analytics reports', $user)) {
+    return TRUE;
+  }
+  return FALSE;
+}
+
+
+function og_analytics_theme() {
+  return array(
+    'og_analytics_reports_summary' => array(
+      'variables' => array('summary' => NULL),
+      'template' => 'theme/og_analytics_reports_summary',
+//      'file' => 'google_analytics_reports.theme.inc',
+    ),
+  );
+}
+
+function template_preprocess_og_analytics_reports_summary(&$vars) {
+  $vars = array_merge($vars, $vars['usage']);
+  $vars['timespan'] = ($vars['start_date'] != -31) ? t("between {$vars['start_date']} and {$vars['end_date']}") : t('Over the Past 30 Days');
+
+  if ($vars['sessions'] <= 0) {
+    $vars['pages_per_visit'] = '0.00';
+    $vars['new_sessions'] = '0.00%';
+    $vars['time_on_site'] = '0:00';
+  }
+  else {
+    $vars['pages_per_visit'] = number_format(round($vars['pageviews'] / $vars['sessions'], 2), 2);
+    $vars['new_sessions'] = number_format(round(($vars['newUsers'] / $vars['sessions'])*100, 2), 2) . '%';
+    $vars['time_on_site'] = format_interval($vars['sessionDuration'] / $vars['sessions']);
+  }
+
+  if ($vars['entrances'] <= 0) {
+    $vars['bounces'] = '0.00%';
+  }
+  else {
+    $vars['bounces'] = number_format(round(($vars['bounces'] / $vars['entrances'])*100, 2), 2) . '%';
+  }
+
+  $vars['entrances'] = number_format($vars['entrances']);
+  $vars['pageviews'] = number_format($vars['pageviews']);
+
+  $pages = array();
+  foreach ($vars['pages'] as $page) {
+    if ($page['pagePath'] == '/index.html') {
+      $page['pagePath'] = variable_get('google_analytics_reports_api_default_page', '/');
+    }
+    $pages[] = l($page['pageTitle'], "http://$page[hostname]$page[pagePath]", array('external' => TRUE, 'html' => TRUE)) . ' - ' . format_plural($page['pageviews'], '1 View', '@views Views', array('@views' => number_format($page['pageviews'])));
+  }
+  $vars['pages'] = theme('item_list', array('items' => $pages, 'type' => 'ol'));
+
+  $referrals = array();
+  foreach ($vars['referrals'] as $referral) {
+    $referrals[] = '<strong>' . $referral['source'] . '</strong> - ' . format_plural($referral['sessions'], '1 Session', '@sessions Sessions', array('@sessions' => number_format($referral['sessions'])));
+  }
+  $vars['referrals'] = theme('item_list', array('items' => $referrals, 'type' => 'ol'));
+
+  $keywords = array();
+  foreach ($vars['keywords'] as $keyword) {
+    $keywords[] = '<strong>' . $keyword['keyword'] . '</strong> - ' . format_plural($keyword['sessions'], '1 Session', '@sessions Sessions', array('@sessions' => number_format($keyword['sessions'])));
+  }
+  $vars['keywords'] = theme('item_list', array('items' => $keywords, 'type' => 'ol'));
+
+  // Create legends for graphs / sections to explain to users
+  $site_usage_text = '<div class = "legend">
+                        <li><b>Sessions</b> refers to the number of unique sessions.</li>
+                        <li><b>Pageviews</b> refers to the total number of pages viewed by users.</li>
+                        <li><b>Pages/Session</b> is the average number of pages viewed on each unique session.</li>
+                        <li><b>Bounce Rate</b> is the percentage of users who enter the site and then leave without viewing other pages within the site.</li>
+                        <li><b>Avg. Time on Site</b> is the total time spent viewing pages averaged out over all sessions.</li>
+                        <li><b>% New Sessions</b> is the percentage of the total sessions coming from new users as opposed to return users.</li></div>';
+  $vars['site_usage_legend'] = theme('ctools_collapsible', array('handle' => 'View explanation of terms', 'content' => $site_usage_text, 'collapsed' => TRUE));
+  $countries_text = '<div class = "legend">This graph displays the countries of your toolkit visitors. Mouseover the graph to see exact numbers for the top 20 countries.</div>';
+  $vars['countries_legend'] = theme('ctools_collapsible', array('handle' => 'View explanation', 'content' => $countries_text, 'collapsed' => TRUE));
+  $referrals_text = '<div class = "legend">Referrals are sites that have "referred" your visitors to you. In other words, that is where your traffic is coming from -- who\'s linking to you. A (direct) referral means that the visitor typed in the address and didn\'t click a link to find your site.</div>';
+  $vars['referrals_legend'] = theme('ctools_collapsible', array('handle' => 'View explanation', 'content' => $referrals_text, 'collapsed' => TRUE));
+  $keywords_text = '<div class = "legend">Keywords are search terms visitors used to find your content in a search engine. In the case of "not set" or "not provided" visitors probably clicked a link or entered your address directly instead of doing a search.</div>';
+  $vars['keywords_legend'] = theme('ctools_collapsible', array('handle' => 'View explanation', 'content' => $keywords_text, 'collapsed' => TRUE));
+  $sources_text = '<div class = "legend">Source types refers to whether the referral is from an unpaid search (<b>organic</b>), a link from another site (<b>referral</b>), a cost per click / paid seach campaign (<b>ccp</b>), or a <b>direct</b> visit (visitor typed your URL directly into a browser or had your site bookmarked).</div>';
+  $vars['source_types_legend'] = theme('ctools_collapsible', array('handle' => 'View explanation', 'content' => $sources_text, 'collapsed' => TRUE));
+}
+/*
+function gen_cumulative_table($table = 'node', $id = 'nid', $qfragment = '', $points = 0, $timestamp = 0) {
+  $data = array();
+  $nbars = 15;
+  
+  $key = in_array($table, array('node', 'users')) ? 'created' : 'timestamp';
+  $timestamp = $timestamp ? $timestamp : db_query('SELECT MIN(:key) FROM {:table} WHERE :id != 0', array(':key' => $key, ':table' => $table, ':id' => $id));
+  if ($timestamp) {
+    // one point per week (at least 15 points)
+    if (!$points) {
+      $points = max((time() - $timestamp) / (60*60*24*7), 15);
+      while ($points > $nbars) {
+        $points /= 2;
+      }
+    }
+    $interval = round((time() - $timestamp) / ($points - 1), 0);
+    $time = $timestamp;
+    for ($i = 0; $i < $points; $i++) {
+          $data['date'][$i] = format_date($time, 'custom', 'm/d') ;     
+      $data['count'][$i] = db_query('SELECT COUNT(DISTINCT(:id)) FROM {:table} WHERE :key <= :time AND :id2 != 0 :frag', array(':id' => $id, ':table' => $table, ':key' => $key, ':time' => $time, ':id2' => $id, ':frag' => $qfragment));
+      $time += $interval;
+    }
+  }
+
+  return $data;
+}
+*/
+
+function og_analytics_small_line_chart($id_title, $data) {
+  $chart = array(
+    '#chart_id' => $id_title . '_small_30d',
+    '#data' => $data,
+    '#type' => CHART_TYPE_LINE . ':nda',
+    '#size' => chart_size(250, 20),
+    '#adjust_resolution' => TRUE,
+    '#data_colors' => array('AAAAAA'),
+    '#chart_fill' => chart_fill('bg', '00000000'),
+    '#shape_markers' => array(chart_shape_marker(0, 0, 'B', 0, $color = 'EEEEEE')),
+    '#line_styles' => array(chart_line_style(2, 10, 0)),
+  );
+  $chart['#title'] = $title;
+  $chart['#attributes'] = array('title' => $title, 'style' => 'height:' . $chart['#size']['#height'] . 'px; width:100%');
+  $output = theme('chart', array('chart' => $chart));
+  $output .= "<div class='report-hidden'>$title</div>";
+  return $output;
+}
+
+/**
+ * Implements hook_preprocess_page().
+ *
+ * Adds CSS to adjust things for printing as PDF.
+ */
+function og_analytics_preprocess_page($vars) {
+  $args = arg();
+  if (in_array('google-analytics', $args) && in_array('reports', $args) && $args[3] == 'reports' && $args[4] == 'google-analytics' && $args[5] == 'print') {
+    drupal_add_js(drupal_get_path('module', 'og_analytics') . '/js/og_analytics.js',
+      array(
+        'type' => 'file',
+        'scope' => 'footer',
+        'group' => JS_DEFAULT,
+        'defer' => TRUE
+      )
+    );
+    $vars['scripts'] = drupal_get_js();
+  }
+
+  // Add moreless js to report page
+  if (in_array('google-analytics', $args) && $args[2] == 'reports') {
+    drupal_add_js(drupal_get_path('module', 'og_analytics'). '/js/moreless.js');
+    $vars['scripts'] = drupal_get_js();
+  }
+}
+
+/**
+ * Provides standard list of countries used by Google Analytics.
+ */
+function _og_analytics_countries() {
+  $countries = array (
+'Afghanistan' => 0, 'Åland Islands' => 0, 'Albania' => 0, 'Algeria' => 0, 'American Samoa' => 0, 'Andorra' => 0, 'Angola' => 0, 'Anguilla' => 0, 'Antarctica' => 0, 'Antigua and Barbuda' => 0, 'Argentina' => 0, 'Armenia' => 0, 'Aruba' => 0, 'Australia' => 0, 'Austria' => 0, 'Azerbaijan' => 0, 'Bahamas' => 0, 'Bahrain' => 0, 'Bangladesh' => 0, 'Barbados' => 0, 'Belarus' => 0, 'Belgium' => 0, 'Belize' => 0, 'Benin' => 0, 'Bermuda' => 0, 'Bhutan' => 0, 'Bolivia' => 0, 'Bosnia and Herzegovina' => 0, 'Botswana' => 0, 'Brazil' => 0, 'British Indian Ocean Territory' => 0, 'British Virgin Islands' => 0, 'Brunei' => 0, 'Bulgaria' => 0, 'Burkina Faso' => 0, 'Burundi' => 0, 'Cambodia' => 0, 'Cameroon' => 0, 'Canada' => 0, 'Cape Verde' => 0, 'Cayman Islands' => 0, 'Chad' => 0, 'Chile' => 0, 'China' => 0, 'Christmas Island' => 0, 'Colombia' => 0, 'Comoros' => 0, 'Congo [DRC]' => 0, 'Congo [Republic]' => 0, 'Cook Islands' => 0, 'Costa Rica' => 0, 'Côte d’Ivoire' => 0, 'Croatia' => 0, 'Cuba' => 0, 'Cyprus' => 0, 'Czech Republic' => 0, 'Denmark' => 0, 'Djibouti' => 0, 'Dominica' => 0, 'Dominican Republic' => 0, 'Ecuador' => 0, 'Egypt' => 0, 'El Salvador' => 0, 'Equatorial Guinea' => 0, 'Eritrea' => 0, 'Estonia' => 0, 'Ethiopia' => 0, 'Falkland Islands [Islas Malvinas]' => 0, 'Faroe Islands' => 0, 'Fiji' => 0, 'Finland' => 0, 'France' => 0, 'French Guiana' => 0, 'French Polynesia' => 0, 'Gabon' => 0, 'Gambia' => 0, 'Georgia' => 0, 'Germany' => 0, 'Ghana' => 0, 'Gibraltar' => 0, 'Greece' => 0, 'Greenland' => 0, 'Grenada' => 0, 'Guadeloupe' => 0, 'Guam' => 0, 'Guatemala' => 0, 'Guernsey' => 0, 'Guinea' => 0, 'Guyana' => 0, 'Haiti' => 0, 'Honduras' => 0, 'Hong Kong' => 0, 'Hungary' => 0, 'Iceland' => 0, 'India' => 0, 'Indonesia' => 0, 'Iran' => 0, 'Iraq' => 0, 'Ireland' => 0, 'Isle of Man' => 0, 'Israel' => 0, 'Italy' => 0, 'Jamaica' => 0, 'Japan' => 0, 'Jersey' => 0, 'Jordan' => 0, 'Kazakhstan' => 0, 'Kenya' => 0, 'Kiribati' => 0, 'Kuwait' => 0, 'Kyrgyzstan' => 0, 'Laos' => 0, 'Latvia' => 0, 'Lebanon' => 0, 'Lesotho' => 0, 'Liberia' => 0, 'Libya' => 0, 'Liechtenstein' => 0, 'Lithuania' => 0, 'Luxembourg' => 0, 'Macau' => 0, 'Macedonia [FYROM]' => 0, 'Madagascar' => 0, 'Malawi' => 0, 'Malaysia' => 0, 'Maldives' => 0, 'Mali' => 0, 'Malta' => 0, 'Marshall Islands' => 0, 'Martinique' => 0, 'Mauritania' => 0, 'Mauritius' => 0, 'Mayotte' => 0, 'Mexico' => 0, 'Micronesia' => 0, 'Moldova' => 0, 'Monaco' => 0, 'Mongolia' => 0, 'Montenegro' => 0, 'Montserrat' => 0, 'Morocco' => 0, 'Mozambique' => 0, 'Myanmar [Burma]' => 0, 'Namibia' => 0, 'Nauru' => 0, 'Nepal' => 0, 'Netherlands' => 0, 'Netherlands Antilles' => 0, 'New Caledonia' => 0, 'New Zealand' => 0, 'Nicaragua' => 0, 'Niger' => 0, 'Nigeria' => 0, 'North Korea' => 0, 'Niue' => 0, 'Northern Mariana Islands' => 0, 'Norway' => 0, 'Oman' => 0, 'Pakistan' => 0, 'Palau' => 0, 'Palestinian Territories' => 0, 'Panama' => 0, 'Papua New Guinea' => 0, 'Paraguay' => 0, 'Peru' => 0, 'Philippines' => 0, 'Poland' => 0, 'Portugal' => 0, 'Puerto Rico' => 0, 'Qatar' => 0, 'Réunion' => 0, 'Romania' => 0, 'Russia' => 0, 'Rwanda' => 0, 'Saint Barthélemy' => 0, 'Saint Helena' => 0, 'Saint Kitts and Nevis' => 0, 'Saint Lucia' => 0, 'Saint Martin' => 0, 'Saint Vincent and the Grenadines' => 0, 'Samoa' => 0, 'San Marino' => 0, 'São Tomé and Príncipe' => 0, 'Saudi Arabia' => 0, 'Senegal' => 0, 'Serbia' => 0, 'Seychelles' => 0, 'Sierra Leone' => 0, 'Singapore' => 0, 'Slovakia' => 0, 'Slovenia' => 0, 'Solomon Islands' => 0, 'Somalia' => 0, 'South Africa' => 0, 'South Korea' => 0, 'Spain' => 0, 'Sri Lanka' => 0, 'Sudan' => 0, 'South Sudan' => 0, 'Suriname' => 0, 'Swaziland' => 0, 'Sweden' => 0, 'Switzerland' => 0, 'Syria' => 0, 'Taiwan' => 0, 'Tajikistan' => 0, 'Tanzania' => 0, 'Thailand' => 0, 'Timor-Leste' => 0, 'Togo' => 0, 'Tonga' => 0, 'Trinidad and Tobago' => 0, 'Tunisia' => 0, 'Turkey' => 0, 'Turkmenistan' => 0, 'Turks and Caicos Islands' => 0, 'Uganda' => 0, 'Ukraine' => 0, 'United Arab Emirates' => 0, 'United Kingdom' => 0, 'United States' => 0, 'Uruguay' => 0, 'Uzbekistan' => 0, 'Vanuatu' => 0, 'Vatican City' => 0, 'Venezuela' => 0, 'Vietnam' => 0, 'U.S. Virgin Islands' => 0, 'Yemen' => 0, 'Zambia' => 0, 'Zimbabwe' => 0, 
+  );
+  return $countries;
+}

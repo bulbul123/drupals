@@ -1,0 +1,157 @@
+#content .view {
+	.date-nav-wrapper {
+                .date-heading {
+                   h3 {
+                     @include adjust-font-size-to(18px);
+                   }
+                 }
+		.date-nav {
+			margin: 0;
+		}
+		ul.pager {
+			border: none;
+			padding: 0;
+		}
+		li.date-next,
+		li.date-prev {
+			@include adjust-font-size-to(11px);
+			background: none;
+			border: none;
+			margin: 0;
+			width: 60px;
+			a {
+				border: solid 1px #D6D9DE;
+		    border-bottom-color: #BFC2C9;
+		    border-top-color: #C4C8CF;
+		    float: right;
+				margin: 0;
+				padding: 3px 0;
+				text-align: center;
+				text-transform: uppercase;
+				position: absolute;
+				right: 0;
+				top: 0;
+				width: 58px;
+				z-index: 500;
+				&:hover {
+					background-color: $white;
+					border-color: darken(#BFC2C9, 10);
+					z-index: 1000;
+				}
+			}
+		}
+		li.date-next {
+			a {
+				@include border-right-radius(3px);
+			}
+		}
+		li.date-prev {
+			a {
+				@include border-left-radius(3px);
+				float: left;
+				left: 0;
+				width: 59px;
+			}
+		}
+	}
+}
+
+.calendar-calendar .month-view .full td.multi-day div.monthview,
+.calendar-calendar .week-view .full td.multi-day div.weekview,
+.calendar-calendar .day-view .full td.multi-day div.dayview {
+	background-color: $royal;
+	color: $white;
+	a {
+		color: $white;
+	}
+}
+.calendar-calendar .month-view .full td.multi-day .inner .monthview .continues,
+.calendar-calendar .month-view .full td.multi-day .inner .monthview .cutoff,
+.calendar-calendar .week-view .full td.multi-day .inner .weekview .continues,
+.calendar-calendar .week-view .full td.multi-day .inner .weekview .cutoff {
+	background-color: $royal;
+}
+
+.calendar-calendar .month-view .full td.single-day div.monthview,
+.calendar-calendar .week-view .full td.single-day div.weekview,
+.calendar-calendar .day-view .full td.single-day div.dayview {
+	background-color: $blue-white;
+}
+
+.calendar-calendar .month-view .full tr td.single-day.today,
+.calendar-calendar .month-view .full td.date-box.today {
+	border-color: $royal;
+}
+
+.event-list {
+	h3 {
+		@include adjust-font-size-to(14px);
+		margin: 0;
+	}
+	div.field-name-field-date {
+		margin: 0 !important;
+	}
+}
+
+.page-events {
+	#tabs {
+		display: none;
+		visibility: hidden;
+	}
+}
+
+.page-events-past-events,
+.page-events-upcoming-events {
+	#content-inner {
+		padding: 0;
+	}
+}
+
+.node-type-event {
+	.field-name-content-type {
+    @include float-left;
+    @include adjust-font-size-to(11px, 1.4);
+    @include icon(0 -500px);
+    font-weight: bold;
+    margin: 0 0 12px cp(-72,$width-content);
+    padding: 0 0 0 cp(72,$width-content);
+    text-transform: uppercase;
+  }
+  .field-name-field-date {
+    @include float-left;
+    @include adjust-font-size-to(11px, 1.4);
+    //@include icon(0 -196px);
+    margin-bottom: 12px;
+    padding-left: 20px;
+    .field-label {
+    	display: none;
+    	visibility: hidden;
+    }
+  }
+  .field-name-body {
+  	clear: both;
+  }
+  .field-name-field-event-location,
+  .field-name-field-event-org,
+  .field-name-field-event-url,
+  .field-name-field-sponsored {
+    @include background(image-url("bg_border-dotted.png") 0 0 repeat-x);
+    @include legacy-pie-clearfix;
+    clear: both;
+    padding-bottom: $base-line-height;
+    padding-top: $base-line-height;
+    .field-label {
+      @include adjust-font-size-to(11px);
+      clear: left;
+      float: left;
+      font-weight: bold;
+      text-transform: uppercase;
+      width: 20%;
+    }
+    .field-items {
+      clear: right;
+      float: right;
+      width: 75%;
+    }
+  }
+}

@@ -1,0 +1,146 @@
+<?php
+
+define('LH_DATA_DIR', 'linkchecker_highlight');
+
+/**
+ * @file
+ * Highlights broken links.
+ */
+
+define('LC_HIGHLIGHT_PERM', 'view highlighted broken links');
+define('LC_HIGHLIGHT_OWN_PERM', 'view own highlighted broken links');
+define('LC_HIGHLIGHT_NODE_ACCESS_PERM', 'view accessible highlighted broken links');
+
+/**
+ * Implements hook_help().
+ */
+function linkchecker_highlight_help($path, $arg) {
+  switch ($path) {
+    case 'admin/help#linkchecker_highlight':
+      $output = '';
+      $output .= '<p>' . t('Demonstration of highlighting for broken links:') . '</p>';
+      $output .= '<a href="#" class="broken-link broken-link--110">' . t('Broken Link') . ' -110</a><br />';
+      $output .= '<a href="#" class="broken-link broken-link-0">' . t('Broken Link') . ' 0</a><br />';
+      $output .= '<a href="#" class="broken-link broken-link-301">' . t('Broken Link') . ' 301</a><br />';
+      $output .= '<a href="#" class="broken-link broken-link-403">' . t('Broken Link') . ' 403</a><br />';
+      $output .= '<a href="#" class="broken-link broken-link-404">' . t('Broken Link') . ' 404</a><br />';
+      return $output;
+      break;
+  }
+}
+
+/**
+ * Implements hook_permission().
+ */
+function linkchecker_highlight_permission() {
+  $items = array();
+
+  $items[LC_HIGHLIGHT_PERM] = array(
+    'title' => t("View highlighted broken links"),
+    'description' => t("View links determined to be broken by the Linkchecker module with highlighted backgrounds. Implies the ability to see highlighted links in nodes user is able to update and in nodes which are owned by the user. Recommended only for site administrators."),
+  );
+  $items[LC_HIGHLIGHT_NODE_ACCESS_PERM] = array(
+    'title' => t("View highlighted broken links user can update"),
+    'description' => t("View links determined to be broken by the Linkchecker module with highlighted backgrounds in nodes user has permission to update. Implies the ability to see highlighted links in nodes which are owned by the user."),
+  );
+  $items[LC_HIGHLIGHT_OWN_PERM] = array(
+    'title' => t("View own highlighted broken links"),
+    'description' => t("View links determined to be broken by the Linkchecker module with highlighted backgrounds in user's own nodes."),
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_preprocess_page().
+ *
+ * This function highlights broken links on the page according to their response
+ * code.
+ */
+function linkchecker_highlight_preprocess_page(&$vars) {
+  if (user_access(LC_HIGHLIGHT_OWN_PERM) || user_access(LC_HIGHLIGHT_PERM) || user_access(LC_HIGHLIGHT_NODE_ACCESS_PERM)) {
+    drupal_add_css(drupal_get_path('module', 'linkchecker_highlight') . '/linkchecker_highlight.css', array('type' => 'file'));
+  $js = variable_get('linkchecker_highlight_js_file', '');
+  $js_file = file_build_uri(LH_DATA_DIR . '/' . $js);
+  drupal_add_js($js_file, array('type' => 'file', 'scope' => 'footer', 'group' => JS_DEFAULT, 'defer' => TRUE));
+
+  }
+}
+
+function linkchecker_highlight_cron() {
+  linkchecker_highlight_create_js();
+}
+
+function linkchecker_highlight_create_js() {
+    $ignore_response_codes = preg_split('/(\r\n?|\n)/', variable_get('linkchecker_ignore_response_codes', "200\n206\n302\n304\n401\n403"));
+
+    $query = db_select('linkchecker_node', 'ln');
+    $query->innerJoin('linkchecker_link', 'll', 'll.lid = ln.lid');
+    if (user_access(LC_HIGHLIGHT_OWN_PERM) && !user_access(LC_HIGHLIGHT_PERM)) {
+      // User has permission to see highlighted links in their own nodes but
+      // not all nodes
+      global $user;
+      $query->innerJoin('node', 'n', 'ln.nid = n.nid');
+      $query->condition('n.uid', $user->uid);
+    }
+    else if(user_access(LC_HIGHLIGHT_NODE_ACCESS_PERM) && !user_access(LC_HIGHLIGHT_PERM)) {
+      // User has permission to see highlighted links in updateable nodes but
+      // not all nodes
+      $query->innerJoin('node', 'n', 'ln.nid = n.nid');
+      $query->fields('n', array('nid'));
+    }
+    $query->condition('ll.code', $ignore_response_codes, 'NOT IN');
+    $query->condition('ll.code', -1, '<>');
+    $query->fields('ll', array('url', 'error', 'code'));
+    $query->distinct();
+
+    $result = $query->execute();
+
+    // Use jQuery to add CSS classes defined in linkchecker_highlight.css
+    $js_add_classes = array();
+    foreach ($result as $data) {
+      if(isset($data->nid) && !node_access('update', node_load($data->nid))) {
+        // User does not have permission to see highlighted links in all nodes
+        // and does not have permission to update the node
+        continue;
+      }
+      $title = (!empty($data->error)) ? t('Broken Link') . " ($data->code): $data->error" : t('Broken Link') . " ($data->code)";
+      $js_add_classes[] = <<<END
+var selector = "a[href^=\"{$data->url}\"]";
+jQuery(selector).addClass("broken-link broken-link-{$data->code}");
+jQuery(selector).attr("title", "$title");
+END;
+    }
+
+    $js = "jQuery(document).ready(function() {";
+    foreach ($js_add_classes as $js_add_class) {
+      $js .= "\n\t" . $js_add_class;
+    }
+    $js .= "\n});";
+
+  // Write new js file
+  if (!empty($js)) {
+
+    $old_file = variable_get('linkchecker_highlight_js_file', '');
+    $dir = file_build_uri(LH_DATA_DIR);
+    $timestamp = time();
+    $js_file = 'linkchecker_highlight_' . $timestamp . '.js';
+    $data_js = file_build_uri(LH_DATA_DIR . '/' . $js_file);
+    if(!file_exists($data_js)) {
+      file_prepare_directory($dir, FILE_CREATE_DIRECTORY);
+      if(file_unmanaged_save_data($js, $data_js)) {
+        variable_set('linkchecker_highlight_js_file', $js_file);
+        watchdog('linkchecker_highlight', 'created new js file with timestamp ' . $timestamp);
+        if (!empty($old_file)) {
+          file_unmanaged_delete(file_build_uri(LH_DATA_DIR . '/' . $old_file));
+          watchdog('linkchecker_highlight', 'deleted old js file');
+        }
+        return TRUE;
+      } else {
+        return FALSE;
+      }
+    }
+
+  }
+  return FALSE;
+}

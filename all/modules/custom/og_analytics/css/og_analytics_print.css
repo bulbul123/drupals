@@ -1,0 +1,55 @@
+body {
+  width: 750px;
+  width: 8.5in;
+  height: 11in;
+  margin: 1em auto;
+  background-color: #fff;
+}
+
+#wrapper {
+  border: 1px solid #ccc;
+  padding: 1em;
+  margin-bottom: 1em;
+}
+
+#wrapper .report-hidden {
+  display: block;
+  padding: 1em;
+  width: 75%;
+  margin: 0 auto;
+  font-style: italic;
+}
+.google-analytics-pages .item-list,
+.google-analytics-referrals {
+  page-break-after: always;
+}
+
+.print-link {
+  display: none;
+}
+
+.google-analytics-referrals,
+.google-analytics-visits,
+.google-analytics-totals,
+.google-analytics-pages,
+.google-analytics-countries,
+.google-analytics-keywords,
+.google-analytics-source_types {
+  border-top: 1px dashed #ccc;
+  margin-top: 1em;
+}
+
+/* Page Views table styling */
+.more-block table {
+  border-spacing: 0;
+  border: 1px solid #bbb;
+  border-collapse: collapse;
+}
+.more-block table tr.even, .more-block table th {
+  background-color: #e1e2dc;
+}
+.more-block table td, .more-block table th {
+  padding: 6px 6px;
+  vertical-align: top;
+  text-align: left;
+}

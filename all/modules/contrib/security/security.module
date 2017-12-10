@@ -1,0 +1,271 @@
+<?php
+
+/**
+ * @file
+ * Performs various security updates to different parts of user as selected by admin.
+ */
+
+/**
+ * Implements hook_menu()
+ */
+function security_menu() {
+  $items = array(
+    'admin/config/security' => array(
+      'title' => 'Security',
+      'description' => 'Security Settings.',
+      'position' => 'left',
+      'weight' => -10,
+      'page callback' => 'system_admin_menu_block_page',
+      'access arguments' => array('access administration pages'),
+      'file' => 'system.admin.inc',
+      'file path' => drupal_get_path('module', 'system'),
+    ),
+    'admin/config/security/content-security-policy' => array(
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('security_content_security_policy_form'),
+      'title' => t('Content Security Policy Settings'),
+      'description' => t('Enable security controls for your site to prevent cross site scripting attacks and more.'),
+      'access arguments' => array('edit security settings'),
+      'file' => 'security.admin.inc',
+      'file path' => drupal_get_path('module', 'security'),
+    ),
+    'admin/config/security/client-hashing' => array(
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('security_content_client_hashing_form'),
+      'title' => t('Clientside Hashing'),
+      'description' => t('Enable and configure client side hashing of user passwords. This is especially useful if you do not have SSL enabled.'),
+      'access arguments' => array('edit security settings'),
+      'file' => 'security.admin.inc',
+      'file path' => drupal_get_path('module', 'security'),
+    ),
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_permission()
+ */
+function security_permission() {
+  return array(
+    'edit security settings' => array(
+      'title' => t('Change the site\'s security settings'),
+      'description' => t('This permission allows users to change security settings on the site.'),
+    ),
+  );
+}
+
+/**
+ * A function to generate a random string of characters
+ */
+function security_generate_random_string($length=8, $validCharacters='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') {
+  $randomString = '';
+  $numberOfValidCharacters = strlen($validCharacters) - 1;
+  while ($length--) {
+    $randomString .= $validCharacters[mt_rand(0, $numberOfValidCharacters)];
+  }
+  return $randomString;
+}
+
+/**
+ * An implementation of hook_boot()
+ * We use hook_boot() because we want to be certain that we add these headers for cached pages as well.
+ */
+function security_boot() {
+  $header_names = array('Content-Security-Policy', 'X-Content-Security-Policy', 'X-WebKit-CSP');
+  $header_string = "default-src 'self'; ";
+
+  $js_string = _security_boot_js_generation();
+  $css_string = _security_boot_css_generation();
+
+  if (strlen($js_string) > 0 || strlen($css_string) > 0) {
+    $header_string .= $js_string . $css_string;
+    foreach ($header_names as $name) {
+      drupal_add_http_header($name, $header_string);
+    }
+  }
+}
+
+/**
+ * A function to generate the CSS headers necessary
+ */
+function _security_boot_css_generation() {
+  $header_string = '';
+  if (variable_get('security_content_security_policy_status', 0) == 1) {
+    // Content security policy is enabled, Check if there are any CSS restrictions
+    if (variable_get('security_restrict_css_source_self', 0) == 1) {
+      $css_to_restrict = array();
+      $css_to_restrict[] = "'self'";
+      if (variable_get('security_restrict_css_source_other', 0) == 1) {
+        if (strlen(variable_get('security_restrict_css_source_other_custom', '')) > 0) {
+          $css_to_restrict[] = variable_get('security_restrict_css_source_other_custom', '');
+        }
+      }
+      $header_string .= 'style-src ';
+      foreach ($css_to_restrict as $restriction) {
+        $header_string .= $restriction . ' ';
+      }
+      $header_string .= " 'unsafe-inline'";
+    }
+  }
+  return $header_string;
+}
+
+/**
+ * A function to generate the javascript headers necessary
+ */
+function _security_boot_js_generation() {
+  $header_string = '';
+  if (variable_get('security_content_security_policy_status', 0) == 1) {
+    // Content security policy is enabled, Check if there are any Javascript restrictions
+    if (variable_get('security_restrict_javascript_source_self', 0) == 1) {
+      $js_to_restrict = array();
+      $js_to_restrict[] = "'self'";
+      if (variable_get('security_restrict_javascript_source_google_analytics', 0) == 1) {
+        $js_to_restrict[] = variable_get('security_google_analytics_js_address', 'https://www.google-analytics.com');
+      }
+      if (variable_get('security_restrict_javascript_source_facebook', 0) == 1) {
+        $js_to_restrict[] = variable_get('security_facebook_js_address', '*://connect.facebook.com');
+      }
+      if (variable_get('security_restrict_javascript_source_other', 0) == 1) {
+        if (strlen(variable_get('security_restrict_javascript_source_other_custom', '')) > 0) {
+          $js_to_restrict[] = variable_get('security_restrict_javascript_source_other_custom', '');
+        }
+      }
+      $header_string .= 'script-src ';
+      foreach ($js_to_restrict as $restriction) {
+        $header_string .= $restriction . ' ';
+      }
+      if (variable_get('security_restrict_javascript_no_inline', 1) == 1) {
+        $header_string .= '; options inline-script; ';
+      }
+    }
+  }
+  return $header_string;
+}
+
+/**
+ * Implement hook_js_alter to get that inline JS out of there and into a file
+ */
+function security_js_alter(&$javascript) {
+  if (variable_get('security_content_security_policy_status', 0) == 1) {
+    if (variable_get('security_restrict_javascript_no_inline', 1) == 1) {
+      // We jave all the settings in $javascript['settings'] to build the same
+      // string that would later be built in drupal_get_js()
+      $js_text = 'jQuery.extend(Drupal.settings, ' . drupal_json_encode(drupal_array_merge_deep_array($javascript['settings']['data'])) . ');';
+
+      // Now save the data there
+      $file = file_save_data($js_text, NULL, FILE_EXISTS_REPLACE);
+      if ($file) {
+        $file_path = file_create_url($file->uri);
+        $javascript[$file_path] = array(
+          'data' => $file_path,
+          'type' => 'file',
+          'scope' => 'header',
+          'group' => 100,
+          'every_page' => 1,
+          'preprocess' => 0,
+          'defer' => 0,
+          'cache' => 0,
+          'weight' => 500,
+        );
+        unset($javascript['settings']);
+      }
+
+      $js_text = '';
+      // We also have to do the inline stuff
+      foreach ($javascript as $key => $script) {
+        if ($script['type'] == 'inline') {
+          $js_text .= ' ' . $script['data'] . ' ';
+          unset($javascript[$key]);
+        }
+      }
+      $file = file_save_data($js_text, NULL, FILE_EXISTS_REPLACE);
+      if ($file) {
+        $file_path = file_create_url($file->uri);
+        $javascript[$file_path] = array(
+          'data' => $file_path,
+          'type' => 'file',
+          'scope' => 'header',
+          'group' => 100,
+          'every_page' => 1,
+          'preprocess' => 0,
+          'defer' => 0,
+          'cache' => 0,
+          'weight' => 500,
+        );
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_libraries_info()
+ */
+function security_libraries_info() {
+  return array(
+    'cryptojs' => array(
+      'name' => 'CryptoJS',
+      'vendor url' => 'http://code.google.com/p/crypto-js/',
+      'download url' => 'http://crypto-js.googlecode.com/files/CryptoJS%20v3.1.2.zip',
+      'version' => '3.1.2',
+      'path' => 'rollups',
+      'files' => array(
+        'js' => array(
+          'pbkdf2.js',
+        ),
+      ),
+    ),
+  );
+}
+
+/**
+ * Implements hook_requirements()
+ */
+function security_requirements() {
+  $t = get_t();
+  $requirements = array();
+
+  $info = libraries_load('cryptojs');
+  if (!$info['loaded']) {
+    $requirements['security'] = array(
+      'severity' => REQUIREMENT_ERROR,
+      'title' => $t('Security'),
+      'value' => $t('Failed to load the CryptoJS library'),
+      'description' => $t('Please make sure the CryptoJS library is installed in the libraries directory (libraries\cryptojs).'),
+    );
+  }
+  else {
+    $requirements['security'] = array(
+      'severity' => REQUIREMENT_INFO,
+      'title' => $t('Security'),
+      'value' => $info['version'],
+    );
+  }
+
+  return $requirements;
+}
+
+function security_form_alter(&$form, $form_state, $form_id) {
+  $encrypted_forms = array('user_login', 'user_login_block', 'user_register_form', 'user_profile_form');
+  if (in_array($form_id, $encrypted_forms)) {
+    if (variable_get('security_client_hashing_status', FALSE) || TRUE) {
+      // Attach the javascript to the login form
+      $form['#attached']['js'][drupal_get_path('module', 'security') . '/security.js'] = array(
+        'type' => 'file',
+      );
+      $form['#attached']['js'][libraries_get_path('cryptojs') . '/rollups/pbkdf2.js'] = array(
+        'type' => 'file',
+      );
+      $settings = array(
+        'salt' => variable_get('security_client_hashing_salt', 'checkthelog'),
+        'keySize' => variable_get('security_client_hashing_key_size', 128/32),
+        'iterations' => variable_get('security_client_hashing_iterations', 250),
+      );
+      $form['#attached']['js'][] = array(
+        'data' => array('security' => $settings),
+        'type' => 'setting',
+      );
+      $form['#attributes']['class'][] = 'security-user-login-form';
+    }
+  }
+}

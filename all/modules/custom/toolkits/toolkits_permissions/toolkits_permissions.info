@@ -1,0 +1,7 @@
+name = Toolkits Permissions
+description = Alter the actions available for a user based on their OG role/permissions and form updates
+package = Toolkits
+core = 7.x
+dependencies[] = og
+dependencies[] = og_context
+dependencies[] = view_unpublished

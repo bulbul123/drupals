@@ -1,0 +1,72 @@
+#footer .container {
+  @include border-bottom-radius(4px);
+  @include box-shadow(rgba($black, 0.2) 0 0 2px 0);
+  background-color: $white;
+  border-top: solid 1px $gray;
+  margin-bottom: $base-line-height * 2;
+  padding: 30px 0;
+}
+
+.region-footer {
+  padding: 0 cp(50,$width-full);
+}
+
+//USAID Statement
+.usaid-statement {
+  @include float-left;
+  @include adjust-font-size-to(14px, 1);
+  width: cp($width-content,$width-full);
+  .content {
+    padding-right: cp(50,$width-content);
+  }
+  p {
+    margin: 0;
+    @include adjust-font-size-to($base-font-size,1);
+  }
+}
+
+//USAID Logo
+.usaid-logo {
+  @include float-right;
+  width: cp($width-sidebar,$width-full);
+  #usaid-logo {
+    a {
+      @include replace-text-with-dimensions("logo_usaid.png", 0, 0);
+      display: block;
+      margin: 0 auto;
+    }
+  }
+}
+
+//Footer Navigation
+#block-menu-block-4 {
+  margin-bottom: 10px;
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    li {
+      display: inline;
+      padding-right: 24px;
+      a {
+        @include link-colors($royal-dark,$royal-darkest);
+        @include adjust-font-size-to(14px,1);
+        font-weight: 600;
+        text-decoration: none;
+      }
+    }
+  }
+}
+
+@media screen and (max-width: 600px) {
+  
+  .usaid-statement,
+  .usaid-logo {
+    float: none;
+    width: auto;
+  }
+  .usaid-statement .content {
+    margin-bottom: $base-line-height;
+  }
+
+}

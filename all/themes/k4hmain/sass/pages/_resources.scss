@@ -1,0 +1,214 @@
+
+//	Publications & Resources
+
+
+//	Resources Page
+
+.page-resources {
+	#content-inner {
+		padding: 0;
+	}
+}
+
+//	Resources List
+
+.search-results,
+.resources-list {
+	clear: both;
+	ol.resources,
+  ol.search-results {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+	li.views-row,
+  li.search-result {
+		border-top: solid 1px $gray-light;
+		margin: 0;
+		padding: 12px 40px 18px;
+	}
+	.index {
+    //@include adjust-font-size-to(11px, 1.5);
+		float: left;
+		font-weight: bold;
+		margin-left: -(cp(48,$width-content - 96));
+		text-align: center;
+		width: cp(48,$width-content - 96);
+	}
+  .search-info,
+	.meta {
+    @include adjust-font-size-to(15px);
+    //margin-bottom: 12px;
+	}
+	h3 {
+    @extend .ff-serif;
+    //@include adjust-font-size-to(14px, 1);
+    clear: left;
+    margin-bottom: $base-line-height/4;
+    padding: 0;
+    a {
+      @include link-colors($red, $red-dark);
+      display: block;
+      text-decoration: none;
+    }
+  }
+  .search-snippet-info {
+    padding-left: 0;
+  }
+  .views-row {
+	  .content {
+	  	//@include adjust-font-size-to(14px, 1);
+	  }
+  }
+}
+
+.no-sidebars {
+  .search-results,
+  .resources-list {
+    li.views-row,
+    li.search-result {
+      padding: 12px cp(50,$width-full) 18px;
+    }
+    .index {
+      margin-left: -(cp(48,$width-full - 96));
+      width: cp(48,$width-full - 96);
+    }
+  }
+}
+
+//	Search Block
+
+#sidebar-first .search-block {
+	@include background(#314e88 image-url("bg-search-block.png") 50% 0 no-repeat);
+	border-left: 1px solid #253a66;
+	color: $white;
+	padding: $base-line-height/2;
+	padding-bottom: $base-line-height;
+        input[type="checkbox"] {
+          top:10px;
+        }
+}
+
+//	Individual Resource
+
+.node-type-resource {
+  .field-name-field-author {
+    @include legacy-pie-clearfix;
+    clear: both;
+    margin-bottom: $base-line-height;
+    .field-item {
+      float: left;
+      margin-right: $base-line-height;
+      .node {
+        padding-left: 48px;
+        position: relative;
+      }
+    }
+    .photo {
+      @include float-left;
+      width: 36px;
+      position: absolute;
+      left: 0;
+      top: 0;
+      img {
+        display: block;
+      }
+    }
+    h3.name {
+      //@include adjust-font-size-to(13px, .8);
+      margin: 0;
+      padding-top: 2px;
+      a {
+        text-decoration: none;
+      }
+    }
+    .organization-title {
+      //@include adjust-font-size-to(11px, .7);
+      color: $gray-dark;
+      white-space: nowrap;
+    }
+  }
+
+  .field-name-field-preview-image {
+    float: right;
+    margin: 0 0 $base-line-height 20px;
+    img {
+      @extend .image-shadow;
+    }
+  }
+
+	.field-name-content-type {
+    @include float-left;
+    margin: 0 9px 12px 0;
+    margin-left: -60px;
+  }
+
+	.content-type {
+    @include float-left;
+    //@include adjust-font-size-to(11px, 1.4);
+    font-weight: 600;
+    padding: 0 0 0 0;
+    padding-left: 60px;
+    text-transform: uppercase;
+  }
+	.resource {
+    @include icon(0 -540px);
+  }
+  .field-name-post-date,
+  .field-name-field-date {
+    @include float-left;
+    //@include adjust-font-size-to(11px, 1.4);
+    margin-bottom: 12px;
+  }
+  .field-name-field-date {
+    padding-left: 20px;
+  }
+  .field-name-field-resource-file {
+  	clear: both;
+  }
+  .field-name-body {
+    clear: left;
+  }
+  .field-name-field-resource-file {
+  	img {
+  		float: left;
+  		margin-right: 10px;
+  	}
+  	a {
+  		@include link-colors($navy-dark, $navy-darkest);
+  		display: block;
+  		font-weight: bold;
+	  	text-decoration: none;
+	  	vertical-align: middle;
+	  }
+  }
+  .field-name-field-resource-file,
+  .field-name-field-resource-link,
+  .field-name-field-org-publisher,
+  .field-name-field-topics,
+  .field-name-field-resource-countries,
+  .field-name-field-resource-type {
+    @include background(image-url("bg_border-dotted.png") 0 0 repeat-x);
+    @include legacy-pie-clearfix;
+    clear: both;
+    padding-bottom: $base-line-height;
+    padding-top: $base-line-height;
+    .field-label {
+      //@include adjust-font-size-to(11px);
+      clear: left;
+      float: left;
+      font-weight: bold;
+      text-transform: uppercase;
+      width: 20%;
+    }
+    .field-items {
+      clear: right;
+      float: right;
+      width: 75%;
+    }
+  }
+  .node-resource {
+  	padding-bottom: 36px;
+  }
+}
+

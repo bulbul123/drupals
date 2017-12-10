@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Affiliate Partners feature.
+ */
+
+include_once('affiliate_partners.features.inc');

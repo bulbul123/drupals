@@ -1,0 +1,185 @@
+//Contributor List
+.no-sidebars.section-contributor #content-inner {
+  padding-right: cp(30,1080);
+}
+.contributor-list {
+  list-style: none;
+  margin: 0 0 $base-line-height 0;
+  padding: 0;
+  .item-list {
+    @include legacy-pie-clearfix;
+  }
+  ul {
+    margin: 0;
+    padding: 0;
+    li {
+      @include float-left;
+      margin: 0 cp(20,1000) 20px 0;
+      padding: 0;
+      width: cp(313.33,1000);
+      a {
+        @include legacy-pie-clearfix;
+        border: solid 1px $gray-lightest;
+        display: block;
+        min-height: 58px;
+        padding: 6px 6px 6px 70px;
+        position: relative;
+        text-decoration: none;
+        &:hover {
+          background-color: $gray-white;
+          border-color: $gray;
+        }
+        img {
+          @include float-left;
+          display: block;
+          margin: 0 12px 0 0;
+          position: absolute;
+          left: 6px;
+          top: 6px;
+        }
+        .contributor-info {
+          @include float-left;
+          //padding: 10px 0 0 0;
+          padding: 0;
+          //width: 76%;
+          h3 {
+            @include adjust-font-size-to(12px, .8);
+            color: $royal-dark;
+            margin: 0;
+            padding: 0;
+          }
+          span {
+            @include adjust-font-size-to(11px, .8);
+            display: block;
+            color: $gray-dark;
+          }
+        }
+      }
+    }
+  }
+}
+
+@media screen and (max-width: 778px) {
+  .contributor-list ul li {
+    @include float-left;
+    margin: 0 cp(20,1000) 20px 0;
+    width: cp(364,768);
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .contributor-list ul li {
+    @include float-left;
+    margin: 0 cp(20,1000) 20px 0;
+    width: cp(280,600);
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .contributor-list ul li {
+    display: block;
+    float: none;
+    margin: 0 cp(20,1000) 20px cp(20,1000);
+    padding: 0;
+    width: auto;
+  }
+}
+
+//Individual Contributor Page
+.node-author-profile {
+  .group-left {
+    margin: 0 cp(50,612) 0 0;
+    width: cp(430,612);
+  }
+  .group-right {
+    width: cp(130,612);
+  }
+  .social-links {
+    @include border-radius(3px);
+    border: solid 1px $gray;
+    margin-bottom: $base-line-height;
+    .field {
+      border-top: solid 1px $gray-light;
+      //padding: 12px;
+      a {
+        @include adjust-font-size-to(16px, 1.5);
+        @include icon;
+        @include link-colors($navy-light, $navy-dark);
+        display: block;
+        font-weight: 600;
+        padding: 0 12px 0 36px;
+        //padding: 0 0 0 24px;
+        text-decoration: none;
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+      a.twitter {   @extend .icon-twitter; }
+      a.facebook {  @extend .icon-facebook; }
+      a.linkedin {  @extend .icon-linkedin; }
+      a.website {   @extend .icon-globe; }
+    }
+    .field:first-child {
+      border: none;
+    }
+    .field-name-field-link-twitter {
+      border: none;
+    }
+  }
+}
+
+.field-name-field-author-photo {
+  margin: 0 0 $base-line-height 0;
+  img {
+    @extend .image-shadow;
+  }
+}
+
+.field-name-related-author-posts {
+  h2 {
+    @extend .ff-sans-serif;
+    @include adjust-font-size-to(14px, 1);
+    @include icon(0 -380px);
+    padding: 0 0 0 24px;
+  }
+  ul {
+    list-style-type: none;
+    li {
+      margin: 0;
+      a {
+        @include background(image-url("bg_border-dotted.png") 0 0 repeat-x);
+        @include link-colors($red);
+        display: block;
+        padding: 12px 0;
+        text-decoration: none;
+        h3 {
+         @extend .ff-serif;
+         @include adjust-font-size-to($base-font-size, .8);
+          margin: 0;
+          padding: 0;
+        }
+        &:hover {
+          h3 {
+            text-decoration: underline;
+          }
+        }
+        .date {
+          @include adjust-font-size-to(18px, .7);
+          color: $navy-darkest;
+          font-weight: 600;
+        }
+      }
+    }
+  }
+}
+
+//Make content single column
+@media screen and (max-width: 778px) {
+  .node-author-profile {
+    .group-left,
+    .group-right {
+      float: none;
+      width: auto
+    }
+  }
+}

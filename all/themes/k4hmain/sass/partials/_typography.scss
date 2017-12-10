@@ -1,0 +1,79 @@
+// Available Fonts & Weights From Google Fonts
+// Droid Serif Bold 700
+// Open Sans Regular 400
+// Open Sans Regular Italic 400
+// Open Sans Bold 700
+// Open Sans Bold Italic 700
+
+.ff-serif {
+  font-family: 'PT Serif', 'Droid Serif', Georgia, serif;
+}
+.ff-sans-serif {
+  font-family: Calibri, "PT Sans", "Segoe UI", Candara, "Bitstream Vera Sans", "DejaVu Sans", "Bitstream Vera Sans", "Trebuchet MS", Verdana, "Verdana Ref", sans serif;
+}
+
+body {
+  @extend .ff-sans-serif;
+  color: $navy-light;
+}
+
+h2, h3, h4, h5, h6 {
+  @extend .ff-sans-serif;
+  font-weight: 700;
+  margin: 0 0 $base-line-height 0;
+}
+
+h1 {
+  @extend .ff-serif;
+  font-weight: 700;
+}
+
+h2 {
+  @include adjust-font-size-to(21px,1.5);
+  &.alternate,&.title-multimedia {
+  @include adjust-font-size-to(28px,1.5);
+  }
+}
+h2.teaser-title {
+
+  margin-bottom:5px;
+}
+h3 {
+  @include adjust-font-size-to(28px,1.5);
+}
+h4 {
+  @include adjust-font-size-to(24px,1);
+}
+
+h1.page-title {
+  @include adjust-font-size-to(32px, 2);
+  color: $red;
+  margin: 0 cp(50,$width-content) $base-line-height cp(50,$width-content);
+}
+
+.no-sidebars {
+  h1.page-title {
+    margin-left: 40px;
+    margin-right: 40px;
+  }
+}
+
+blockquote {
+  color: $royal-dark;
+  margin: 0 cp(50,$width-content) $base-line-height cp(50,$width-full);
+  p {
+    @extend .ff-serif;
+    //@include adjust-font-size-to(16px, 1.4);
+  }
+}
+
+p {
+  margin: 0 0 $base-line-height 0;
+  padding: 0;
+  //@include adjust-font-size-to(16px,1.5);
+}
+
+ul, ol {
+  margin: 0 0 $base-line-height cp(20,430);
+  padding: 0;
+}

@@ -1,0 +1,420 @@
+body {
+  @include background($blue-lightest image-url("bg.jpg") 0 0 repeat);
+}
+#page {
+  @include background(transparent image-url("bg-fade.jpg") 0 0 repeat-x);
+}
+
+.one-sidebar #main-content {
+  @include background($white image-url("bg_content-faux-columns.png") repeat-y -1266px 0);
+  //@include background($white image-url("bg_content-faux-columns.png") repeat-y 65.925926% 0);
+  @include legacy-pie-clearfix;
+}
+
+.two-sidebars {
+  #main-content {
+    @include background($white image-url("bg_content-faux-columns.png") repeat-y -1174px 0);
+    @include legacy-pie-clearfix;
+  }
+
+  #content {
+    @include background($white image-url("bg_content-faux-dotted-columns.png") repeat-y 526px 0);
+  }
+}
+
+@media screen and (max-width: 1080px) {
+  .one-sidebar #main-content {
+    background-position: 65.925926% 0;
+  }
+}
+@media screen and (max-width: 480px) {
+  .one-sidebar #main-content {
+    background-color: $white;
+    background-image: none;
+  }
+}
+
+
+#content {
+  position: relative;
+}
+
+#content-inner {
+  @include legacy-pie-clearfix;
+  padding: 0 cp(50,$width-content) 0 cp(50,$width-content);
+}
+
+.no-sidebars #main-content {
+  @include legacy-pie-clearfix;
+  background-color: $white;
+}
+
+.no-sidebars #content-inner {
+  padding: 0 cp(50,$width-full) $base-line-height cp(50,$width-full);
+}
+
+//.not-front #main-content #content {
+  //padding-top: 48px;
+//}
+
+.not-front #main-content #content h1.page-title {
+  padding-top: 48px;
+  margin-bottom: 36px;
+}
+
+.page-blog,
+.page-taxonomy,
+.content-fill,
+.front {
+  #content-inner {
+    padding: 0;
+    #block-system-main {
+      padding: 0;
+    }
+  }
+}
+
+#main .container {
+  @include box-shadow(rgba($black, 0.2) 0 0 2px 0);
+}
+
+a.zoom {
+  @include inline-block;
+  position: relative;
+  box-sizing: border-box;
+  span {
+    @include hide-text;
+    @extend .icon-zoom;
+    float: left;
+    display: block;
+    height: 20px;
+    left: 0;
+    margin-left: -5px;
+    margin-top: -5px;
+    position: absolute;
+    top: 0;
+    width: 20px;
+  }
+}
+
+// Node styles
+
+.title-teaser {
+  @extend .ff-serif;
+  @include adjust-font-size-to(13px);
+  margin-bottom: 0;
+
+  a {
+    text-decoration: none;
+  }
+}
+
+// Block styles
+
+.block-plain,
+#sidebar-first div.block-plain {
+  @include padding-leader(1);
+  @include padding-trailer(1);
+  padding-right: 18px;
+  padding-left: 18px;
+
+  .block-content-wrap {
+    background-image: none;
+
+    .view {
+      border: none;
+      background-color: transparent;
+    }
+  }
+}
+
+.block-inset {
+  @include padding-leader(1);
+  @include padding-trailer(1);
+  padding-right: 24px;
+  padding-left: 24px;
+
+  .block-content-wrap {
+    @include single-box-shadow(rgba($black, 0.7), 0, 1px, 3px, 0, true);
+    @include border-radius(4px);
+    @include padding-leader(1);
+    @include padding-trailer(1);
+    background-color: rgba($black, .2);
+  }
+}
+
+.block-content-inset {
+  @include single-box-shadow(rgba($black, 0.7), 0, 1px, 3px, 0, true);
+  @include border-radius(4px);
+  @include padding-leader(1);
+  @include padding-trailer(1);
+  background-color: rgba($black, .2);
+  padding-right: 24px;
+  padding-left: 24px;
+}
+
+.block-inset.block-top-align {
+  padding-top: 0;
+}
+
+.block-divider-top {
+  @include leading-border(1px, 1);
+  @include margin-leader(1);
+  border-color: $gray-lightest;
+  border-style: dotted;
+}
+
+.block-no-divider,
+#sidebar-first .block.block-no-divider {
+  border-color: transparent;
+}
+
+.block-cover,
+// Over specified on purpose.
+#sidebar-first .block.block-cover {
+  .block-content-wrap {
+    padding: 0;
+  }
+
+  p {
+    padding-right: 24px;
+    padding-left: 24px;
+  }
+}
+
+.block-tout {
+  .content {
+    @extend .ff-serif;
+    @include adjust-font-size-to(24px, 1);
+    font-weight: bold;
+  }
+}
+
+.block-rich {
+  color: $white;
+
+  a.learn-more,
+  .button-go {
+    @include single-box-shadow(rgba($black, .4), 0, 1px, 1px, 0);
+  }
+
+}
+
+.block-rich-red,
+#sidebar-first .block.block-rich-red {
+  .block-content-wrap {
+    @include single-box-shadow(darken($red-dark, 10%), 0, 1px, 60px, 8px, true);
+    background-color: $red;
+    background-image: none;
+  }
+}
+
+.block-rich-gray,
+#sidebar-first .block.block-rich-gray {
+  .block-content-wrap {
+    @include single-box-shadow($gray-darkest, 0, 1px, 60px, 8px, true);
+    background-color: $gray-dark;
+    background-image: none;
+  }
+}
+
+.block-callout {
+  @include padding-trailer(1);
+  padding-right: 24px;
+  padding-left: 24px;
+
+  .block-content-wrap {
+    @include border-radius(4px);
+    @include rhythm-borders(1px, 1);
+    border-color: $gray;
+  }
+
+  .content {
+    padding-right: 90px;
+    margin-bottom: -18px;
+  }
+}
+
+.block-callout-cd,
+#sidebar-first .block.block-callout-cd {
+  .block-content-wrap {
+    background: $white url('../images/bg_ad-cd.jpg') bottom right no-repeat;
+  }
+}
+
+.block-embossed-gray {
+  filter: progid:DXImageTransform.Microsoft.gradient(gradientType=0, startColorstr='#{$gray-darker}',endColorstr='#{$gray-dark}');
+  @include background-image(linear-gradient(top, $gray-darker, $gray-dark));
+  @include padding-leader(1);
+  @include trailing-border(1px, 1);
+
+  border-color: $gray-darker;
+}
+
+// Block title styles
+
+.title-centered {
+  @include adjust-font-size-to(14px, 1);
+  text-align: center;
+}
+
+.title-left {
+  @include adjust-font-size-to(15px, 1);
+}
+
+.title-rich,
+#sidebar-first .block .title-rich {
+  @include adjust-font-size-to(18px, .4);
+  @include single-text-shadow(none);
+  @include padding-leader(1, 14px);
+  color: $white;
+  text-transform: none;
+}
+
+.title-callout,
+#sidebar-first .block .title-callout {
+  @include adjust-font-size-to(24px, 1.5);
+  color: $red;
+  text-align: left;
+  text-transform: none;
+}
+
+.block-inset-title {
+  @extend .ff-serif;
+  @include trailing-border(1px, 1, 24px);
+  @include single-box-shadow(rgba($black, 0.2), 0, -1px, 0, 0, true);
+  @include single-text-shadow(rgba($black, .6), 0, 1px, 0);
+  border-color: rgba($white, .1);
+  padding-right: 18px;
+  padding-left: 18px;
+}
+
+.overlay-red {
+  @include leading-border(1px, 1);
+  @include padding-trailer(1);
+  background-color: rgba($black, .3);
+  border-color: $red-dark;
+  margin-bottom: 0;
+}
+
+.text-align-center {
+  text-align: center;
+}
+
+.teaser-description {
+  //@include adjust-font-size-to(12px);
+}
+
+// Lists
+.no-bullets,
+.item-list .no-bullets {
+  margin: 0;
+
+  li {
+    list-style: none;
+    margin: 0;
+  }
+}
+
+.separated {
+  display: inline;
+  margin: 0 .5em 0 0;
+  padding: 0 1em 0 0;
+  @extend .icon-slash;
+}
+
+.separated-pipe {
+  &:after {
+    content: " | ";
+    margin-right: .5em;
+  }
+}
+
+// Fields
+.field-inline-label {
+  @include background(image-url("bg_border-dotted.png") 0 0 repeat-x);
+  @include legacy-pie-clearfix;
+  clear: both;
+  padding-bottom: $base-line-height;
+  padding-top: $base-line-height;
+
+  .field-label {
+    @include adjust-font-size-to(11px);
+    clear: left;
+    float: left;
+    font-weight: bold;
+    text-transform: uppercase;
+    width: 20%;
+  }
+
+  .field-items {
+    clear: right;
+    float: right;
+    width: 75%;
+  }
+}
+
+//Twipsy Tooltips
+.modal .popover, .modal .twipsy {
+  z-index: 12000;
+}
+.twipsy {
+  display: block;
+  position: absolute;
+  visibility: visible;
+  padding: 5px;
+  font-size: 11px;
+  z-index: 1000;
+  @include opacity(.8);
+}
+.twipsy.fade.in {
+  @include opacity(.8);
+}
+.twipsy.above .twipsy-arrow {
+  bottom: 0;
+  left: 50%;
+  margin-left: -5px;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid #000000;
+}
+.twipsy.left .twipsy-arrow {
+  top: 50%;
+  right: 0;
+  margin-top: -5px;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 5px solid #000000;
+}
+.twipsy.below .twipsy-arrow {
+  top: 0;
+  left: 50%;
+  margin-left: -5px;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 5px solid #000000;
+}
+.twipsy.right .twipsy-arrow {
+  top: 50%;
+  left: 0;
+  margin-top: -5px;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-right: 5px solid #000000;
+}
+.twipsy-inner {
+  padding: 3px 8px;
+  background-color: #000000;
+  color: white;
+  text-align: center;
+  max-width: 200px;
+  text-decoration: none;
+  -webkit-border-radius: 4px;
+  -moz-border-radius: 4px;
+  border-radius: 4px;
+}
+.twipsy-arrow {
+  position: absolute;
+  width: 0;
+  height: 0;
+}

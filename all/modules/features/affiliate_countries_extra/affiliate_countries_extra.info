@@ -1,0 +1,5 @@
+name = "Affiliate Countries Extra"
+description = "Non-featurable code for affiliate_countries"
+core = "7.x"
+package = "Features"
+dependencies[] = "taxonomy"

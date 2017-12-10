@@ -1,0 +1,7 @@
+name = Toolkits Search
+description = Block for Solr searchin the toolkits
+package = Toolkits
+core = 7.x
+dependencies[] = og
+dependencies[] = og_context
+dependencies[] = apachesolr_search

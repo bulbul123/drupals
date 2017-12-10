@@ -1,0 +1,4 @@
+name = "Toolkits Misc"
+description = "Various Toolkits-related functionality."
+package = Toolkits
+core = "7.x"

@@ -1,0 +1,214 @@
+<?php
+/*
+  Create some extra blocks for use with Organic Groups and
+  provide some additional functionality
+  
+*/
+
+/*
+  Implement hook_block_configure
+  
+  Define the configuration for blocks
+*/
+function og_blocks_block_configure($delta = '') {
+  if(substr($delta, 0, 9) != 'og_blocks'){ return; }
+  
+  module_load_include('inc', 'og_blocks', 'og_blocks.blocks');
+  $form = array();
+  
+  $instance = og_blocks_load_block($delta);
+  if (!empty($instance)) {
+    return $instance->configure($form);
+  }
+  return false;
+}
+
+/*
+  Implement hook_block_info
+  
+  Define the blocks for this module
+*/
+function og_blocks_block_info() {
+  module_load_include('inc', 'og_blocks', 'og_blocks.blocks');
+  
+  // get the og blocks from the database
+  $og_blocks = og_blocks_get_blocks();
+    
+  // return the blocks data
+  foreach ($og_blocks as $og_block){
+    $class = $og_block->class;
+    $this_block = new $class($og_block->id);
+    $blocks['og_blocks_'. $og_block->id] = array(
+      'info' => $this_block->title .' ('. $class .')',
+      'cache' => $this_block->cache,
+    );
+  }
+  
+  return $blocks;
+}
+
+/*
+  Implement hook_block_save
+*/
+function og_blocks_block_save($delta = '', $edit = array()) {
+  if(substr($delta, 0, 9) != 'og_blocks'){ return; }
+  module_load_include('inc', 'og_blocks', 'og_blocks.blocks');
+  $instance = og_blocks_load_block($delta);
+  $instance->save($edit);
+  return;
+}
+
+/*
+  Implement hook_block_view
+*/
+function og_blocks_block_view($delta = '') {
+  if (substr($delta, 0, 9) != 'og_blocks'){ return; }
+  module_load_include('inc', 'og_blocks', 'og_blocks.blocks');
+  $instance = og_blocks_load_block($delta);
+  if (!empty($instance)) {
+    return $instance->view();
+  }
+  return false;
+}
+
+/*
+  Implement hook_block_view_alter
+  
+  Add block title to the block if no subject is specified
+*/
+function og_blocks_block_view_alter(&$data, $block) {
+  if ($block->module == 'og_blocks') {
+    if (!empty($block->title) && !isset($data['subject'])) {
+      $data['subject'] = $block->title;
+    }
+  }
+}
+
+/**
+ * Get the OG Block types that are available as an options array
+ */
+function og_blocks_get_block_class_options() {
+  $classes = get_declared_classes();
+  $og_classes = array();
+  foreach($classes as $class){
+    if(substr($class, 0, 8) != 'OgBlocks'){ continue; }
+    $instance = new $class;
+    if (!empty($instance)) {
+      $og_classes[$class] = $instance->title;
+    }
+  }
+  return $og_classes;
+}
+
+/**
+ * Get the OG blocks
+ */
+function og_blocks_get_blocks() {
+  // update the database from the variable
+  og_blocks_sync_storage();
+  
+  // read the blocks from the database
+  return db_select('og_blocks')
+    ->fields('og_blocks')
+    ->orderBy('title')
+    ->execute();
+}
+
+/**
+ * Alter the admin form for OG Blocks
+ */
+function og_blocks_form_block_admin_display_form_alter(&$form, $form_state) {
+  module_load_include('inc', 'og_blocks', 'og_blocks.admin');
+  return _og_blocks_form_block_admin_display_form_alter($form, $form_state);
+}
+
+/**
+ * Implements hook_menu().
+ */
+function og_blocks_menu() {
+  if (module_exists('block')) {
+    $items['admin/structure/block/add-og-block'] = array(
+      'title' => 'Add OG block',
+      'description' => 'Add a new organic group block.',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('og_blocks_add_block_form'),
+      'access arguments' => array('administer blocks'),
+      'type' => MENU_LOCAL_ACTION,
+      'file' => 'og_blocks.admin.inc',
+    );
+    $items['admin/structure/block/delete-og-block'] = array(
+      'title' => 'Delete OG block',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('og_blocks_delete'),
+      'access arguments' => array('administer blocks'),
+      'type' => MENU_CALLBACK,
+      'file' => 'og_blocks.admin.inc',
+    );
+  }
+  return $items;
+}
+
+/**
+ * Get the block instance given a delta
+ */
+function og_blocks_load_block($delta) {
+  $block_id = intval(str_replace('og_blocks_', '', $delta));
+  // dpm($block_id);
+  $block_class = db_select('og_blocks')
+    ->fields('og_blocks')
+    ->condition('id', $block_id, '=')
+    ->execute()
+    ->fetchAssoc();
+  $class = $block_class['class'];
+  if (isset($class)) {
+    return new $class($block_id);
+  }
+  return FALSE;
+}
+
+/**
+ * Sync the variable/db
+ * 
+ * To easily allow this data to be part of a feature in the Features module, we make
+ * sure to sync the database with a variable and vice versa
+ */
+function og_blocks_sync_storage($direction = 'variable') {
+  switch ($direction) {
+    case 'variable':
+      // read the variable and update the database accordingly
+      $blocks = variable_get('og_blocks');
+      foreach ($blocks as $variable_block) {
+
+        $result = db_merge('og_blocks')
+          ->key(array(
+            'id' => $variable_block->id,
+          ))
+          ->fields(array(
+            'title' => $variable_block->title,
+            'class' => $variable_block->class,
+            'description' => $variable_block->description,
+            'content_type' => $variable_block->content_type,
+            'view' => $variable_block->view,
+          ))
+          ->execute();
+
+      }
+      break;
+    
+    case 'db':
+    default:
+      // read the database and update the variable
+      $blocks = db_select('og_blocks')
+        ->fields('og_blocks')
+        ->orderBy('title')
+        ->execute();
+      
+      $variable = array();
+      foreach ($blocks as $block) {
+        $block->hash = md5(serialize($block));
+        $variable[] = $block;
+      }
+      variable_set('og_blocks', $variable);
+      break;
+  }
+}

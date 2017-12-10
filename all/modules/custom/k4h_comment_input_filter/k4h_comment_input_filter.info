@@ -1,0 +1,4 @@
+name = "K4Health Comment Input Filter"
+description = "Makes the filtered html the default input filter for comments."
+package = "Aten"
+core = "7.x"

@@ -1,0 +1,981 @@
+<?php
+
+function toolkits_misc_init() {
+  // Add inline CSS to style collaborator images in Toolkits
+  $args = arg();
+  if ($args[0] == 'print' && $args[2] == 'export') {
+    $options = array(
+      'type' => 'file',
+    );
+    drupal_add_css(drupal_get_path('module', 'toolkits_misc') . '/css/toolkits_misc_print.css', $options);
+  } else {
+    $options = array(
+      'type' => 'file',
+    );
+    drupal_add_css(drupal_get_path('module', 'toolkits_misc') . '/css/toolkits_misc.css', $options);
+  }
+}
+
+function toolkits_misc_current_toolkit() {
+  $group = og_context();
+
+  if ($group) {
+    $node = node_load($group->etid);
+    return $node;
+  } // if
+
+  $node = node_load(arg(1));
+
+  if (isset($node->book['bid'])) {
+    return node_load($node->book['bid']);
+  } // if
+
+  // If we don't already have a toolkit context, check if other modules provide it
+  $toolkit_context = module_invoke_all('toolkit_context', $node);
+
+  return (!empty($toolkit_context)) ? $toolkit_context : FALSE;
+} // toolkits_misc_current_toolkit
+
+/**
+ * Implements hook_form_alter
+ */
+function toolkits_misc_form_alter($form, $form_state, $form_id) {
+  if ($form_id == 'node_delete_confirm' && in_array($form['#node']->type, array('toolkit_page', 'toolkit_resource'))) {
+    $form['#submit'][] = '_toolkits_misc_redirect_after_delete';
+  }
+}
+
+/*
+ * Implements hook_node_insert().
+ */
+function toolkits_misc_node_insert($node) {
+  
+  if ($node->machine_name == 'toolkits-about') {
+
+    // Add menu link
+
+    $menu_item = array(
+      'menu_name'  => 'menu-toolkit-action-menu',
+      'weight'     => 0,
+      'link_title' => 'Learn More',
+      'link_path'  => 'node/' . $node->nid,
+      'module'     => 'menu',
+      'mlid'       => 0,
+    );
+
+    menu_link_save($menu_item);
+    menu_cache_clear_all();
+
+  } // if
+
+} // toolkits_misc_node_insert
+
+/**
+ * Implement hook_modules_enabled().
+ */
+function toolkits_misc_modules_enabled($modules) {
+
+  // Quit here if feature was not enabled.
+
+  if (!in_array('toolkits', $modules)) return;
+
+  // Add the toolkit topics terms
+  _toolkits_misc_load_toolkit_topics();
+  
+  // add og permissions
+  _toolkits_misc_og_permissions();
+  
+
+  // Add dashboard position taxonomy terms.
+
+  $taxonomies = array(
+    'toolkis_featured_display' => 'Toolkits Featured Display',
+    'toolkis_popular_display' => 'Toolkits Popular Display',
+    'toolkits_new_display' => 'Toolkits New Display',
+    'toolkits_sponsors_list_display' => 'Toolkits Sponsors List Display',
+  );
+
+  foreach ($taxonomies as $machine_name => $human_name) {
+
+    $vocab = taxonomy_vocabulary_machine_name_load($machine_name);
+
+    // if there's no vocabulary, we have to make it
+    // either the feature isn't making it or it's doing it too late
+
+    if (!isset($vocab->vid) || empty($vocab->vid)) {
+      $vocab = new stdClass();
+      $vocab->name = $human_name;
+      $vocab->machine_name = $machine_name;
+      taxonomy_vocabulary_save($vocab); // object passed by reference, so it now has an id
+    } // if
+
+    // add topics
+    $types = array(
+      'Left',
+      'Center',
+      'Right',
+    );
+    
+    foreach ($types as $type) {
+
+      // determine if the term exists
+      $terms = taxonomy_term_load_multiple(array(), array('name' => $type, 'vid' => $vocab->vid));
+
+      // if term doesn't exist, create it
+      if (count($terms) == 0) {
+        $term = new stdClass();
+        $term->name = $type;
+        $term->vid = $vocab->vid;
+        taxonomy_term_save($term);
+      } // if
+
+    } // foreach
+
+  } // foreach
+
+  // Insert Apache Solr records.
+
+  if (module_exists('apachesolr_search')) {
+  db_merge('apachesolr_search_page')
+    ->key(array(
+      'page_id' => 'toolkit_search',
+      'env_id' => 'solr',
+    ))
+    ->fields(array(
+      'label' => 'Toolkit Search',
+      'description' => '',
+      'search_path' => 'search/toolkits',
+      'page_title' => 'Toolkits',
+      'settings' => 'a:7:{s:2:"fq";a:1:{i:0;s:52:"bundle:(toolkit OR toolkit_page OR toolkit_resource)";}s:29:"apachesolr_search_search_type";s:6:"custom";s:28:"apachesolr_search_search_box";i:1;s:26:"apachesolr_search_per_page";s:2:"10";s:24:"apachesolr_search_browse";s:6:"browse";s:28:"apachesolr_search_spellcheck";i:1;s:34:"apachesolr_search_allow_user_input";i:0;}'
+    ))
+    ->execute();
+
+  db_merge('apachesolr_search_page')
+    ->key(array(
+      'page_id' => 'toolkit_specific_search',
+      'env_id' => 'solr',
+    ))
+    ->fields(array(
+      'label' => 'Toolkit Specific Search',
+      'description' => '',
+      'search_path' => 'search/toolkit/%',
+      'page_title' => 'Toolkit Search',
+      'settings' => 'a:7:{s:2:"fq";a:1:{i:0;s:52:"bundle:(toolkit OR toolkit_page OR toolkit_resource)";}s:29:"apachesolr_search_search_type";s:6:"custom";s:28:"apachesolr_search_search_box";i:1;s:26:"apachesolr_search_per_page";s:2:"10";s:24:"apachesolr_search_browse";s:6:"browse";s:28:"apachesolr_search_spellcheck";i:1;s:34:"apachesolr_search_allow_user_input";i:0;}'
+    ))
+    ->execute();
+  }
+
+  // Insert OG blocks records.
+
+  db_merge('block')
+    ->key(array(
+      'module' => 'og_blocks',
+      'delta' => 'og_blocks_8',
+      'theme' => 'k4hmain',
+    ))
+    ->fields(array(
+      'region' => -1,
+      'title' => 'Brought to You by',
+      'cache' => -1,
+      'pages' => ''
+    ))
+    ->execute();
+
+  db_merge('block')
+    ->key(array(
+      'module' => 'og_blocks',
+      'delta' => 'og_blocks_9',
+      'theme' => 'k4hmain',
+    ))
+    ->fields(array(
+      'region' => -1,
+      'title' => "What's New",
+      'cache' => -1,
+      'pages' => ''
+    ))
+    ->execute();
+
+  db_merge('block')
+    ->key(array(
+      'module' => 'og_blocks',
+      'delta' => 'og_blocks_10',
+      'theme' => 'k4hmain',
+    ))
+    ->fields(array(
+      'region' => -1,
+      'title' => 'Most Popular',
+      'cache' => -1,
+      'pages' => ''
+    ))
+    ->execute();
+
+  db_merge('block')
+    ->key(array(
+      'module' => 'og_blocks',
+      'delta' => 'og_blocks_11',
+      'theme' => 'k4hmain',
+    ))
+    ->fields(array(
+      'region' => -1,
+      'title' => '',
+      'cache' => -1,
+      'pages' => ''
+    ))
+    ->execute();
+
+  db_merge('block')
+    ->key(array(
+      'module' => 'og_blocks',
+      'delta' => 'og_blocks_12',
+      'theme' => 'k4hmain',
+    ))
+    ->fields(array(
+      'region' => -1,
+      'title' => '',
+      'cache' => -1,
+      'pages' => ''
+    ))
+    ->execute();
+
+  // insert toolkits_contents_block blocks
+  db_merge('block')
+    ->key(array(
+      'module' => 'toolkits_contents_block',
+      'delta' => 'toolkits_order_cd_block',
+      'theme' => 'k4hmain',
+    ))
+    ->fields(array(
+      'region' => -1,
+      'title' => 'Order Toolkits on CD',
+      'cache' => -1,
+      'pages' => ''
+    ))
+    ->execute();
+  
+  db_merge('block')
+    ->key(array(
+      'module' => 'toolkits_contents_block',
+      'delta' => 'toolkits_subscribe',
+      'theme' => 'k4hmain',
+    ))
+    ->fields(array(
+      'region' => -1,
+      'title' => 'Subscribe to K4Health Toolkits',
+      'cache' => -1,
+      'pages' => ''
+    ))
+    ->execute();
+
+  db_merge('block')
+    ->key(array(
+      'module' => 'toolkits_contents_block',
+      'delta' => 'toolkit_updated',
+      'theme' => 'k4hmain',
+    ))
+    ->fields(array(
+      'region' => -1,
+      'title' => 'Toolkit Latest Updated',
+      'cache' => -1,
+      'pages' => ''
+    ))
+    ->execute();
+
+} // toolkits_misc_modules_enabled
+
+/**
+ * Implements template_preprocess_page().
+ */
+function toolkits_misc_preprocess_page(&$vars) {
+
+  global $toolkits_original_q;
+//print '<pre>';
+//print_r($vars);
+//print '</pre>';
+//exit();
+
+  if (isset($toolkits_original_q) && $toolkits_original_q != '' && isset($vars['tabs']['#primary'])) {
+
+    foreach ($vars['tabs']['#primary'] as $key => $tab) {
+
+      // Replace local task tab links on all other extra toolkit pages (sitemap, etc) except about
+      if (substr($toolkits_original_q, -5) != 'about') {
+        $vars['tabs']['#primary'][$key]['#link']['href'] = str_replace($_GET['q'], $toolkits_original_q, $tab['#link']['href']);
+        $vars['tabs']['#primary'][$key]['#link']['tab_root_href'] = str_replace($_GET['q'], $toolkits_original_q, $tab['#link']['tab_root_href']);
+        $vars['tabs']['#primary'][$key]['#link']['tab_parent_href'] = str_replace($_GET['q'], $toolkits_original_q, $tab['#link']['tab_parent_href']);
+      }
+
+    } // foreach
+
+  } // if
+
+  /* Commenting this out until we have the need for feeds
+  // Add feed icon to toolkit homepages
+  if ($vars['node']->type == 'toolkit') {
+    $vars['feed_icons'] = theme('feed_icon', array('url' => 'feed/toolkits/' . $vars['node']->nid, 'title' => $vars['node']->title . ' Feed'));
+  }
+  */
+
+  // Include js for toolkit navigation
+  drupal_add_js(drupal_get_path('module', 'toolkits_misc') . '/js/toolkits_misc.js', 'file');
+} // toolkits_misc_preprocess_page
+
+/**
+ * Implements hook_preprocess_node().
+ */
+function toolkits_misc_preprocess_node(&$vars) {
+  $node = $vars['node'];
+
+  // Add 'more links' link if there are more than 1 files or external links
+  if ($vars['view_mode'] == 'resource_teaser' && $vars['type'] == 'toolkit_resource') {
+    if (isset($vars['field_toolkit_external_links'][$vars['language']]) && count($vars['field_toolkit_external_links'][$vars['language']]) > 1) {
+      $vars['content']['group_links']['field_toolkit_external_links']['#suffix'] = toolkits_misc_add_more_links($node);
+    }
+    if (isset($vars['field_toolkit_files'][$vars['language']]) && count($vars['field_toolkit_files'][$vars['language']]) > 1) {
+      // Remove the first add more link, because we're adding it here (we don't want 2)
+      if (isset($vars['content']['group_links']['field_toolkit_external_links']['#suffix'])) {
+        unset($vars['content']['group_links']['field_toolkit_external_links']['#suffix']);
+      }
+      $vars['content']['group_links']['field_toolkit_files']['#suffix'] = toolkits_misc_add_more_links($node);
+    }
+  }
+
+  // Replace post date (provided by display suite) with last updated
+  // for toolkit_resource nodes in teaser mode
+  if ($vars['view_mode'] == 'teaser' && $vars['type'] == 'toolkit_resource') {
+    $vars['content']['post_date'][0]['#markup'] = 'Updated: ' . date('F d, Y', $node->changed);
+  }
+
+  // Hide standard book navigation if field_book_contextual_navigation
+  // is not turned on for the toolkit / group node 
+  if (($node->type == 'toolkit' || $node->type == 'toolkit_page') && isset($node->book['bid'])) {
+    $group_node = node_load($node->book['bid']);
+    $book_nav = (isset($group_node->field_book_contextual_navigation['und'][0]['value'])) ? $group_node->field_book_contextual_navigation['und'][0]['value'] : NULL;
+    if(isset($vars['content']['book_navigation']) && ($book_nav == 0 || is_null($book_nav))) {
+      unset($vars['content']['book_navigation']);
+    }
+  }
+}
+
+/**
+ * Implements hook_preprocess_book_navigation().
+ */
+function toolkits_misc_preprocess_book_navigation(&$variables) {
+  // Drop the book tree from the book navigation block
+  $variables['tree'] = '';
+}
+
+/**
+ * Implements hook_url_outbound_alter().
+ */
+function toolkits_misc_url_outbound_alter($path, &$options, $original_path) {
+
+  global $toolkits_original_q;
+
+  if (isset($toolkits_original_q) && $toolkits_original_q != '' && isset($options['query']['page'])) {
+
+    $path = str_replace($_GET['q'], $toolkits_original_q, $path);
+    $options['alias'] = TRUE;
+
+  } // if
+
+} // toolkits_misc_url_outbound_alter
+
+/**
+ * Add the toolkit topics taxonomy terms
+ */
+function _toolkits_misc_load_toolkit_topics() {
+  $vocab = taxonomy_vocabulary_machine_name_load('toolkit_topics');
+
+  // if there's no vocabulary, we have to make it
+  // either the feature isn't making it or it's doing it too late
+
+  if (!isset($vocab->vid) || empty($vocab->vid)) {
+    $vocab = new stdClass();
+    $vocab->name = 'Toolkit Topics';
+    $vocab->machine_name = 'toolkit_topics';
+    taxonomy_vocabulary_save($vocab); // object passed by reference, so it now has an id
+  } // if
+
+  // add topics
+  $types = array(
+    'Cross-Cutting Technical Areas',
+    'Diseases',
+    'Environmental Health',
+    'Family Planning Methods',
+    'Family Plannin/Reproductive Health Programs and Services',
+    'Gender',
+    'HIV/AIDS',
+    'Integration of Services',
+    'Maternal and Child Health',
+    'Nutrition',
+    'Youth'
+  );
+  
+  foreach ($types as $type) {
+
+    // determine if the term exists
+    $terms = taxonomy_term_load_multiple(array(), array('name' => $type, 'vid' => $vocab->vid));
+
+    // if term doesn't exist, create it
+    if (count($terms) == 0) {
+      $term = new stdClass();
+      $term->name = $type;
+      $term->vid = $vocab->vid;
+      taxonomy_term_save($term);
+    } // if
+
+  } // foreach
+}
+
+function _toolkits_misc_og_permissions() {
+  dpm('updating og permissions');
+  
+  // firstly, sync the roles themselves
+  db_merge('og_role')
+    ->key(array('rid' => 1))
+    ->fields(array(
+      'gid' => 0,
+      'name' => 'non-member'
+    ))
+    ->execute();
+  
+  db_merge('og_role')
+    ->key(array('rid' => 2))
+    ->fields(array(
+      'gid' => 0,
+      'name' => 'member'
+    ))
+    ->execute();
+  
+  db_merge('og_role')
+    ->key(array('rid' => 3))
+    ->fields(array(
+      'gid' => 0,
+      'name' => 'toolkit manager'
+    ))
+    ->execute();
+  
+  // secondly sync the permissions
+  $permissions = array(
+    array(1, 'subscribe', 'og_ui'),
+    array(2, 'create toolkit_page content', 'og_create_perms'),
+    array(2, 'create toolkit_resource content', 'og_create_perms'),
+    array(2, 'delete any toolkit_page content', 'og'),
+    array(2, 'delete any toolkit_resource content', 'og'),
+    array(2, 'delete own toolkit_page content', 'og'),
+    array(2, 'delete own toolkit_resource content', 'og'),
+    array(2, 'unsubscribe', 'og_ui'),
+    array(2, 'update any toolkit_page content', 'og'),
+    array(2, 'update any toolkit_resource content', 'og'),
+    array(2, 'update own toolkit_page content', 'og'),
+    array(2, 'update own toolkit_resource content', 'og'),
+    array(3, 'add user', 'og_ui'),
+    array(3, 'administer group', 'og'),
+    array(3, 'approve and deny subscription', 'og_ui'),
+    array(3, 'create toolkit_page content', 'og_create_perms'),
+    array(3, 'create toolkit_resource content', 'og_create_perms'),
+    array(3, 'create webform content', 'og_create_perms'),
+    array(3, 'delete any toolkit content', 'og'),
+    array(3, 'delete any toolkit_page content', 'og'),
+    array(3, 'delete any toolkit_resource content', 'og'),
+    array(3, 'delete any webform content', 'og'),
+    array(3, 'delete own toolkit content', 'og'),
+    array(3, 'delete own toolkit_page content', 'og'),
+    array(3, 'delete own toolkit_resource content', 'og'),
+    array(3, 'delete own webform content', 'og'),
+    array(3, 'update any toolkit content', 'og'),
+    array(3, 'update any toolkit_page content', 'og'),
+    array(3, 'update any toolkit_resource content', 'og'),
+    array(3, 'update any webform content', 'og'),
+    array(3, 'update group', 'og'),
+    array(3, 'update own toolkit content', 'og'),
+    array(3, 'update own toolkit_page content', 'og'),
+    array(3, 'update own toolkit_resource content', 'og'),
+    array(3, 'update own webform content', 'og'),
+    array(3, 'edit media', 'media'),
+    array(3, 'view any unpublished toolkit_page content', 'view_unpublished'),
+    array(3, 'view any unpublished toolkit_resource content', 'view_unpublished'),
+  );
+  
+  foreach ($permissions as $permission) {
+    db_merge('og_role_permission')
+      ->key(array(
+        'rid' => $permission[0],
+        'permission' => $permission[1]
+      ))
+      ->fields(array(
+        'module' => $permission[2]
+      ))
+      ->execute();
+  }
+}
+
+function _toolkits_misc_redirect_after_delete($form, $form_state) {
+  $node = $form_state['build_info']['args'][0];
+  $book = $node->book['bid'];
+  // If book is empty, this is likely a toolkit_resource, so still need to get group nid
+  if (!$book) {
+    $gid = $node->group_audience['und'][0]['gid'];
+    $book = og_load($gid)->etid;
+  }
+  $form_state['redirect'] = 'node/' . $book;
+}
+
+/**
+ * Implements hook_token_info().
+ */
+function toolkits_misc_token_info() {
+
+  $info['tokens']['node']['group-path'] = array(
+    'name' => t('Group Path'),
+    'description' => t('The relative path of the group.'),
+  );
+
+  return $info;
+
+} // toolkits_misc_token_info
+
+/**
+ * Implements hook_tokens().
+ */
+function toolkits_misc_tokens($type, $tokens, array $data = array(), array $options = array()) {
+
+  $replacements = array();
+
+  if ($type == 'node') {
+    foreach ($tokens as $name => $original) {
+      if ($name == 'group-path') {
+
+        $node = $data['node'];
+        $gid = og_get_entity_groups('node', $node);
+        
+        if (!$gid && isset($node->group_audience[$node->language][0]['gid'])) {
+          $gid = $node->group_audience[$node->language][0]['gid'];
+        } // if
+
+/*        $groups = og_get_entity_groups('node', $node);
+        foreach ($groups as $group) {
+          $gid = $group;
+        }
+*/
+        if (!$gid) {
+          return;
+        }
+
+        $group_nid = db_select('og', 'og')
+          ->fields('og', array('etid'))
+          ->condition('og.gid', $gid)
+          ->execute()->fetchField();
+        $path = drupal_get_path_alias('node/' . $group_nid);
+        
+        if (!empty($path) && !empty($group_nid)) {
+          $replacements[$original] = $path;
+        } // if
+
+      } // if
+    } // foreach
+  } // if
+
+  return $replacements;
+
+} // toolkits_misc_tokens
+
+
+/**
+ * Implements hook_node_view().
+ */
+function toolkits_misc_node_view($node, $view_mode, $langcode) {
+  // Remove PDF version links from print version of Toolkits
+  if ($view_mode == 'print' && $node->type == 'toolkit_page') {
+    unset($node->content['links']);
+
+    // Remove Resources: label when resources list is empty
+    if (!strstr($node->content['toolkit_page_attached_resources']['#items'][0]['value'], '<ul class="resource-list')) {
+      unset($node->content['toolkit_page_attached_resources']);
+    }
+
+    // Strip out surrounding a tag from zoomable image
+    if (isset($node->content['body']) && strstr($node->content['body'][0]['#markup'], 'content-zoom')) {
+      $node->content['body'][0]['#markup'] = preg_replace('/<a[^>]+content-zoom[^>]*>(.*)<\/a>/isU', "$1", $node->content['body'][0]['#markup']);
+    }
+  }
+
+  // filter out html tags (especially images) and shorten content to no more than 600 characters
+  // for the /toolkits/all, /taxonomy/topics, and /toolkits/noncore/all pages/views
+  $views = array('toolkit_taxonomy_page', 'all_toolkits', 'all_non_core_toolkits', 'archived_toolkits');
+
+  // On print pages, pull out embeded video urls and strip the embeded object
+  if ($view_mode == 'print' && strstr($node->content['body'][0]['#markup'], '<embed src')) {
+    $parts = explode('<embed src="', $node->content['body'][0]['#markup']);
+    $parts2 = explode('" ', $parts[1]);
+    $video_url = t(' Watch the video on ') . l($parts2[0], $parts2[0]);
+    /* The pattern matching on this line causes vim to think and end php ?> has been used */
+    $node->content['body'][0]['#markup'] = preg_replace('@<object[^>]*?>.*?</object>@siU', $video_url, $node->content['body'][0]['#markup']);
+  }
+
+  // Change teaser length to 600 characters (admin page for teaser lengths is in toolkit_resources module)
+  // and change updated date to the date anything in the toolkit was updated
+  if (isset($view_mode) && (($view_mode == 'teaser' || $view_mode == 'country_toolkit_teaser') && isset($node->view) && (in_array($node->view->name, $views))) || ($view_mode == 'resource_teaser' && $node->type == 'toolkit_resource')) {
+    if (!empty($node->field_toolkit_category)) {
+      foreach ($node->field_toolkit_category[$node->language] as $k => $value) {
+        if ($value['value'] == 'archived') {
+          $node->content['content_type'][0]['#markup'] = str_replace('Toolkit', 'Archived Toolkit', $node->content['content_type'][0]['#markup']);
+        }
+      }
+    }
+    // Overwrite teaser content markup that has been truncated too far to it's full self
+    $node->content['body'][0]['#markup'] = (isset($node->body[$node->language][0]['safe_value'])) ? $node->body[$node->language][0]['safe_value'] : $node->body[$node->language][0]['value'];
+    $length = ($view_mode == 'resource_teaser') ? variable_get('toolkit_resource_teaser_length', 150) : variable_get('toolkit_teaser_length', 600);
+    $ellipsis = (strlen($node->content['body'][0]['#markup']) > $length) ? '...' : '';
+    $node->content['body'][0]['#markup'] = (!empty($node->content['body'][0]['#markup'])) ? preg_replace('/\s+?(\S+)?$/', '', substr(preg_replace('|\[\[\{(.*?)\}\]\]|i', '', strip_tags($node->content['body'][0]['#markup'])), 0, $length)) . $ellipsis : '';
+    // Replace post date with date last updated for the toolkit listings on all toolkits (/toolkits/all, /toolkits) and taxonomy pages (/toolkits/topics/%)
+    $latest = _toolkits_misc_tk_last_updated($node);
+    $node->content['post_date'][0]['#markup'] = (is_null($latest)) ? '' : 'Updated: ' . date('F d, Y', $latest);
+  }
+  elseif ($view_mode == 'carousel_teaser' && strlen($node->title) > 65) {
+    $title = preg_replace('/\s+?(\S+)?$/', '', substr(preg_replace('|{(.*?)|i', '', $node->content['title']['#items'][0]['value']), 0, 165));
+    $node->content['title'][0]['#markup'] = (!strstr($node->content['title'][0]['#markup'], $node->title)) ? $title . ' ...</a></h2>' : $node->content['title'][0]['#markup'];
+  }
+}
+
+/**
+ * Determines date of last update in a toolkit.
+ *
+ * @param $node
+ *   Toolkit node object.
+ * @return
+ *   Timestamp of last update within the toolkit.
+ */
+function _toolkits_misc_tk_last_updated($node) {
+  if (!strstr($_GET['q'],'node/add/toolkit')) {
+    if ($node->type == 'toolkit') {
+      // For toolkits, provide date as last new resource date
+      $last_updated = db_query("SELECT MAX(n.created) FROM {node} n INNER JOIN {og_membership} om ON n.nid = om.etid INNER JOIN {og} ON om.gid = og.gid WHERE og.etid = :nid", array(':nid' => $node->nid))->fetchField();
+      return $last_updated;;
+    } else {
+      $last_updated = db_query("SELECT MAX(n.changed) FROM {node} n INNER JOIN {og_membership} om ON n.nid = om.etid INNER JOIN {og} ON om.gid = og.gid WHERE og.etid = :nid", array(':nid' => $node->nid))->fetchField();
+      return ($last_updated > $node->revision_timestamp) ? $last_updated : $node->revision_timestamp;
+    }
+  }
+  return NULL;
+}
+
+function toolkits_misc_print($variables) {
+//  dpr($variables);
+//exit();
+}
+
+/**
+ * Implements hook_field_formatter_info().
+ * Immitating og.field.inc so we can order the groups a user is a member of.
+ */
+function toolkits_misc_field_formatter_info() {
+  return array(
+    'og_list_default' => array(
+      'label' => t('Group default list'),
+      'field types' => array('group'),
+    ),
+  );
+}
+
+
+/**
+ * Implements hook_field_formatter_view().
+ * Immitating og.field.inc so we can order the groups a user is a member of.
+ * All that's added is usort() of the $element array before returning it.
+ */
+function toolkits_misc_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
+  $element = array();
+  if ($field['field_name'] == OG_AUDIENCE_FIELD && !empty($items[0])) {
+    foreach ($items as $delta => $item) {
+      if ($group = og_get_group('group', $item['gid'])) {
+        if ($group->access()) {
+          $label = og_label($group->gid);
+          $entity = entity_load($group->entity_type, array($group->etid));
+          $entity = current($entity);
+          // Get the entity type of the group entity.
+          $uri = entity_uri($group->entity_type, $entity);
+          $element[$delta] = array(
+            '#type' => 'link',
+            '#title' => $label,
+            '#href' => $uri['path'],
+            '#options' => array(
+              'html' => TRUE,
+            ),
+          );
+        }
+        else {
+          // No need to show private groups several times, so remember if it was
+          // already added.
+          $added = &drupal_static(__FUNCTION__, FALSE);
+
+          if (!$added) {
+            $added = TRUE;
+            $element[$delta] = array(
+              '#markup' => '- ' . t('Private group') . ' -',
+            );
+          }
+        }
+      }
+    }
+  }
+
+  sort($element);
+  return $element;
+}
+
+/**
+ * Implementation of hook_views_api().
+ *
+ * This must be called and toolkits_misc.views.inc included for the next
+ * function (toolkits_misc_query_alter()) to be recognized and work.
+ */
+function toolkits_misc_views_api() {
+  return array(
+    'api' => 3,
+  );
+}
+
+/**
+ * Implements hook_query_alter().
+ *
+ * Adds filtering of latest resources down to those that are in core toolkits.
+ */
+function toolkits_misc_query_alter(QueryAlterableInterface $query) {
+  if ($query->hasTag('toolkits_updates')) {
+   // Get the gids for all public core K4H toolkits
+    $subquery = db_query("SELECT DISTINCT(og.gid) FROM {og} INNER JOIN {field_data_field_toolkit_toolkit_topics} topics ON og.etid = topics.entity_id LEFT JOIN field_data_group_access access ON og.etid = access.entity_id WHERE og.entity_type = :type AND access.group_access_value = :num", array(':type' => 'node', ':num' => 0));
+    $gids = array();
+    foreach ($subquery as $record) {
+      $gids[] = $record->gid;
+    }
+
+    // Limit the view of latest resources to those incore K4H toolkits
+    $query->condition('og_membership_node.gid', $gids, 'IN');
+//    $query->distinct();
+  }
+}
+
+
+/**
+ * Implements hook_js_alter().
+ *
+ * Removes views js on print export pages, which was causing js errors.
+ */
+function toolkits_misc_js_alter(&$js) {
+  $args = arg();
+  if ($args[0] == 'print' && $args[2] == 'export') {
+    foreach ($js['settings']['data'] as $k => $v) {
+//      dpr($v);
+      if (isset($v['views'])) {
+        unset($js['settings']['data'][$k]);
+      }
+    }
+  }
+}
+
+/**
+ * Implementation of hook_webform_select_options_info().
+ */
+function toolkits_misc_webform_select_options_info() {
+  $items = array();
+
+  $items['toolkits'] = array(
+    'title' => t('K4H Toolkits'),
+    'options callback' => 'toolkits_misc_toolkit_options',
+  );
+  return $items;
+}
+
+/**
+ * Returns a list of toolkits usable by the webform to indicate which toolkits
+ * should be bundled.
+ */
+function toolkits_misc_toolkit_options($component, $flat, $filter, $arguments) {
+  $options = array();
+
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'node')
+    ->entityCondition('bundle', 'toolkit')
+    ->propertyCondition('status', 1)
+    ->propertyOrderBy('title', 'ASC')
+    ->addTag('webformToolkits')
+    ->fieldCondition('group_access', 'value', 0, '=');
+  $result = $query->execute();
+  $toolkits = node_load_multiple(array_keys($result['node']));
+
+  if (!empty($toolkits)) {
+    foreach($toolkits as $nid => $node) {
+      $options[$node->nid] = $node->title;
+    }
+  }
+
+  return $options;
+}
+
+/**
+ * Implements hook_query_TAG_alter().
+ *
+ * Adds join to EntityFieldQuery for list of Offline Toolkits to limit to those with Topics.
+ */
+function toolkits_misc_query_webformToolkits_alter(QueryAlterableInterface $query) {
+  $query->join('field_data_field_toolkit_toolkit_topics', 'fdt', 'node.nid = fdt.entity_id');
+  $query->condition('fdt.entity_type', 'node');
+}
+
+/**
+ * Helper function to return the current toolkit from a og_context.
+ *
+ * @param  boolean $node_page
+ *   If TRUE only return og_context if we are on a node page.
+ *
+ * @return MIXED
+ *   Return the current toolkit via og_context or NULL if no context.
+ */
+function toolkits_misc_get_toolkit_from_og_context($node_page = TRUE) {
+  $node = menu_get_object();
+  if (empty($node) && $node_page) {
+    return NULL;
+  }
+
+  $og_context = og_context();
+  if (!empty($og_context)) {
+    $toolkit = node_load($og_context->etid);
+    if (!empty($toolkit) && $toolkit->type == 'toolkit') {
+      return $toolkit;
+    }
+  }
+  return NULL;
+}
+
+/**
+ * Helper function to return a toolkit color
+ *
+ * If the color cannot be determined defaults to '4c7fbf' to be consistent with
+ * _k4hmain_get_toolkit_color_css()
+ */
+function toolkits_misc_get_toolkit_color($toolkit) {
+  if (!empty($toolkit)) {
+    $toolkit_color = field_get_items('node', $toolkit, 'field_toolkit_color_main');
+    if (!empty($toolkit_color[0]['jquery_colorpicker'])) {
+      return $toolkit_color[0]['jquery_colorpicker'];
+    }
+  }
+  return '4c7fbf';
+}
+
+/**
+ * Add filesize to the file link on toolkit_resource nodes.
+ */
+function toolkits_misc_preprocess_field($vars) {
+  if ($vars['element']['#field_name'] == 'field_toolkit_files') {
+    foreach ($vars['element'] as $k => $v) {
+      if (is_int($k)) {
+        $size = formatBytes($vars['element'][$k]['#file']->filesize);
+        if (empty($vars['element'][$k]['#file']->description)) {
+          $vars['element'][$k]['#file']->filename .= " ($size)";
+        } else {
+          $vars['element'][$k]['#file']->description .= " ($size)";
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Helper function to provide human-readable filesize format from bytes.
+ */
+function formatBytes($size, $precision = 2) {
+    $base = log($size) / log(1024);
+    $suffixes = array('', 'k', 'M', 'G', 'T');
+
+    return round(pow(1024, $base - floor($base)), $precision) . $suffixes[floor($base)];
+}
+
+/**
+ * Helper function to render a 'more links' link to be attached to toolkit_resource teaser when applicable.
+ */
+function toolkits_misc_add_more_links($node) {
+//  return '<li>'  . l(t('more links >'), 'node/' . $node->nid, array('attributes' => array('class' => 'more-links', 'style' => 'float: left;'))) . '</li>';
+  return l(t('more links >'), 'node/' . $node->nid, array('attributes' => array('class' => 'more-links', 'style' => 'float: left;')));
+
+}
+
+/**
+ * Implements hook_apachesolr_process_results().
+ *
+ * Adds a meta marker 'Archived Toolkit' on nodes from archived toolkits.
+ * @param array $results
+ * @param DrupalSolrQueryInterface $query
+ */
+function toolkits_misc_apachesolr_process_results(&$results, DrupalSolrQueryInterface $query) {
+  $types = array('toolkit', 'toolkit_page', 'toolkit_resource');
+  foreach ($results as $id => $result) {
+    // Skip this checking for archived toolkits if using apachesolr_multsite
+    // and node is not from this site
+    if (module_exists('apachesolr_multisitesearch') && !strstr($result['extra']['hash'], 'This site')) {
+      continue;
+    }
+
+    // If this is or belongs to a toolkit
+    if (in_array($result['fields']['bundle'], $types)) {
+      $node = node_load($result['fields']['entity_id']);
+      $archived = FALSE;
+
+      // Determine if the toolkit is archived
+      if ($node->type != 'toolkit') {
+        $gids = og_get_entity_groups('node', $node);
+        foreach ($gids as $gid) {
+          $og_group = og_load($gid);
+          $group = node_load($og_group->etid);
+          $archived = ($group->field_toolkit_category[$group->language][0]['value'] == 'archived') ? TRUE : FALSE;
+        }
+      } else {
+        $archived = ($node->field_toolkit_category[$node->language][0]['value'] == 'archived') ? TRUE : FALSE;
+      }
+      // Add an archived marker if archived
+      if ($archived) {
+        $results[$id]['extra']['archived'] = 'Archived Toolkit';
+      }
+    }
+  }
+}
+
+/**
+ * Implementation of hook_block_MODULE_DELTA_alter().
+ *
+ * Mimicks the creation of book navigation block, but without passing
+ * the current book page so the entire menu is returned expanded.
+ */
+function toolkits_misc_block_view_book_navigation_alter(&$data, $block) {
+  if ($node = menu_get_object()) {
+    $current_bid = empty($node->book['bid']) ? 0 : $node->book['bid'];
+  }
+
+  if (!isset($node->book)) {
+    return FALSE;
+  }
+    // Only display this block when the user is browsing a book.
+  $select = db_select('node', 'n')
+    ->fields('n', array('title'))
+    ->condition('n.nid', $node->book['bid'])
+    ->addTag('node_access');
+    $title = $select->execute()->fetchField();
+    // Only show the block if the user has view access for the top-level node.
+    if ($title) {
+      $tree = menu_tree_all_data($node->book['menu_name']);
+      foreach ($tree as $id => $item) {
+        foreach ($item['below'] as $id2 => $link) {
+          if ($link['link']['p1'] == 1933 && !empty($link['below'])) {
+            $tree[$id][$id2]['options']['class'][] = 'row';
+          }
+        }
+      }
+
+      // There should only be one element at the top level.
+      $data = array_shift($tree);
+      $data['subject'] = theme('book_title_link', array('link' => $data['link']));
+      $data['content'] = ($data['below']) ? menu_tree_output($data['below']) : '';
+    }
+  return $block;
+}

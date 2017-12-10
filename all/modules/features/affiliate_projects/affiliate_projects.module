@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Affiliate Projects feature.
+ */
+
+include_once('affiliate_projects.features.inc');

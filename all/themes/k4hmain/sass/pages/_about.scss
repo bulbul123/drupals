@@ -1,0 +1,45 @@
+
+.page-about-leadership {
+
+}
+
+.view-leadership {
+	ul {
+		list-style-type: none;
+		li {
+			clear: both;
+			float: left;
+			margin: 0;
+			width: 100%;
+			a {
+	      @include background(image-url("bg_border-dotted.png") 0 0 repeat-x);
+	      @include link-colors($red);
+	      display: block;
+	      float: left;
+	      color: $navy-darkest;
+	      padding: $base-line-height 0;
+	      text-decoration: none;
+	      width: 100%;
+	      img {
+	      	float: left;
+	      	margin-right: 12px;
+	      }
+	      h3 {
+	        @extend .ff-serif;
+	        @include adjust-font-size-to(18px, 1.5);
+	        color: $red;
+	        margin: 0;
+	        padding: 0;
+	      }
+	      &:hover {
+	        h3 {
+	          text-decoration: underline;
+	        }
+	      }
+	      .contributor-organization {
+	        @include adjust-font-size-to(13px, 1);
+	      }
+	    }
+	  }
+	}
+}

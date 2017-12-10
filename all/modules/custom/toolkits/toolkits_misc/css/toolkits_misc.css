@@ -1,0 +1,65 @@
+#node_toolkit_resource_resource_teaser_group_links li {
+  float: left;
+  margin-right: 1em;
+  padding: .15em 0;
+  text-decoration: none;
+}
+
+#node_toolkit_resource_resource_teaser_group_links legend {
+  display: none;
+}
+
+#node_toolkit_resource_resource_teaser_group_links li a {
+  text-decoration: none;
+}
+
+.more-links {
+  text-decoration: none;
+  float: left;
+  padding: .18em 1em;
+}
+
+fieldset#node_toolkit_resource_resource_teaser_group_links {
+  padding: 0.5em 0;
+}
+
+#block-book-navigation li.expanded .expander {
+  cursor: pointer;
+  position: absolute;
+  margin-top: -2.2em;
+  margin-left: 230px;
+  padding: 10px;
+}
+#block-book-navigation li.expanded.alter-expanded {
+  border-bottom-style: solid;
+  border-bottom-width: 0.07692em;
+  border-color: rgba(255,255,255,0.1) transparent rgba(0,0,0,0.2);
+  padding-bottom: inherit;
+}
+#block-book-navigation li.expanded ul.menu { display: none; }
+
+#block-book-navigation .navigation-collapsible  ul.menu  li.expanded  a + div.expander  a {
+  background: url('../images/arrow-down.png') no-repeat;
+  display: block;
+  overflow: hidden;
+  text-indent: 100%;
+  white-space: nowrap;
+  width: 15px;
+  border: none;
+}
+
+#block-book-navigation .navigation-collapsible  ul.menu  li.expanded  a + div.expander a.expandapply:hover {
+  background: url('../images/arrow-down-on.png') no-repeat;
+}
+
+#block-book-navigation .navigation-collapsible  ul.menu  li.expanded  a + div.expander a.collapseapply {
+  background: url('../images/arrow-up.png') no-repeat;
+}
+
+#block-book-navigation .navigation-collapsible  ul.menu  li.expanded  a + div.expander a.collapseapply:hover {
+  background: url('../images/arrow-up-on.png') no-repeat;
+}
+
+.section-toolkits .node-toolkit-resource .file a {
+  word-break: break-all;
+}

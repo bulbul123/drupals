@@ -1,0 +1,735 @@
+<?php
+/**
+ * Implements hook_block_configure
+ *
+ * Hands off the function calls to functions "_toolkits_contents_block_configure_DELTA"
+ */
+function toolkits_contents_block_block_configure($delta = '') {
+  $function_name = '_toolkits_contents_block_configure_'. $delta;
+  if (function_exists($function_name)) {
+    return $function_name();
+  }
+}
+
+/**
+ * Implements hook_block_info
+ */
+function toolkits_contents_block_block_info() {
+  $blocks['toolkits_contents_block'] = array(
+    'info' => t('Toolkit Contents'),
+    'cache' => DRUPAL_CACHE_PER_PAGE,
+  );
+  $blocks['toolkits_breadcrumb_block'] = array(
+    'info' => t('Toolkit Breadcrumb'),
+    'cache' => DRUPAL_CACHE_PER_PAGE
+  );
+  $blocks['toolkits_print_block'] = array(
+    'info' => t('Toolkit Print Block'),
+    'cache' => DRUPAL_CACHE_PER_PAGE
+  );
+  $blocks['toolkits_rss_block'] = array(
+    'info' => t('Toolkit RSS Block'),
+    'cache' => DRUPAL_CACHE_PER_PAGE
+  );
+  $blocks['toolkits_resource_count'] = array(
+    'info' => t('Toolkit Page Resources Count'),
+    'cache' => DRUPAL_CACHE_PER_PAGE
+  );
+  $blocks['toolkits_intro_text'] = array(
+    'info' => t('Toolkits Intro block'),
+    'cache' => DRUPAL_CACHE_PER_PAGE
+  );
+  $blocks['toolkits_admin_menu'] = array(
+    'info' => t('Toolkit Admin Menu'),
+    'cache' => DRUPAL_CACHE_PER_PAGE
+  );
+  $blocks['toolkits_order_cd_block'] = array(
+    'info' => t('Toolkit Order CD Block'),
+    'cache' => DRUPAL_CACHE_PER_PAGE,
+  );
+  $blocks['toolkits_subscribe'] = array(
+    'info' => t('Toolkits Subscribe Callout'),
+    'cache' => DRUPAL_CACHE_PER_PAGE,
+  );
+  $blocks['toolkit_updated'] = array(
+    'info' => t('Toolkit Last Updated Note'),
+    'cache' => DRUPAL_CACHE_PER_PAGE,
+  );
+  $blocks['toolkits_archive'] = array(
+    'info' => t('Toolkits Archive'),
+    'cache' => DRUPAL_CACHE_PER_PAGE,
+  );
+  $blocks['toolkits_by_country'] = array(
+    'info' => t('Toolkits by Country'),
+    'cache' => DRUPAL_CACHE_PER_PAGE,
+  );
+  $blocks['toolkits_video'] = array(
+    'info' => t('Toolkits Video'),
+    'cache' => DRUPAL_CACHE_PER_PAGE,
+   );
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_save
+ *
+ * Hands off the function calls to functions "_toolkits_contents_block_save_DELTA"
+ */
+function toolkits_contents_block_block_save($delta = '', $edit = array()) {
+  $function_name = '_toolkits_contents_block_save_'. $delta;
+  if (function_exists($function_name)) {
+    return $function_name($edit);
+  }
+}
+
+/**
+ * Implements hook_block_view
+ *
+ * Hands off the function calls to functions "_toolkits_contents_block_view_DELTA"
+ */
+function toolkits_contents_block_block_view($delta = '') {
+  $function_name = '_toolkits_contents_block_view_'. $delta;
+  if (function_exists($function_name)) {
+    return $function_name();
+  }
+}
+
+/**
+ * Determine if this is a node page (node/nid)
+ */
+function _toolkits_contents_block_is_node_page() {
+  return arg(0) == 'node' && is_numeric(arg(1));
+}
+
+/*=====================================================================
+  TOOLKIT BLOCKS
+=======================================================================*/
+
+/**
+ * toolkits_intro configuration save
+ */
+function _toolkits_contents_block_save_toolkits_intro_text($edit) {
+  variable_set('toolkits_contents_block_toolkits_intro', $edit['toolkits_intro_text']);
+  return;
+}
+
+/**
+ * toolkits_order_cd configuration save
+ */
+function _toolkits_contents_block_save_toolkits_order_cd_block($edit) {
+  variable_set('toolkits_contents_block_toolkits_order_cd', $edit['toolkits_block_text']['value']);
+  return;
+}
+
+/**
+ * toolkits_subscribe configuration save
+ */
+function _toolkits_contents_block_save_toolkits_subscribe($edit) {
+  variable_set('toolkits_contents_block_toolkits_subscribe', $edit['toolkits_block_text']['value']);
+  return;
+}
+
+/**
+ * toolkits_archive configuration save
+ */
+function _toolkits_contents_block_save_toolkits_archive($edit) {
+  variable_set('toolkits_contents_block_toolkits_archive', $edit['toolkits_block_text']['value']);
+  return;
+}
+
+/**
+ * toolkits_video configuration save
+ */
+function _toolkits_contents_block_save_toolkits_video($edit) {
+  variable_set('toolkits_contents_block_toolkits_video', $edit['toolkits_block_text']['value']);
+}
+
+/**
+ * toolkits_intro configuration
+ */
+function _toolkits_contents_block_configure_toolkits_intro_text() {
+  $form = array(
+    'toolkits_intro_text' => array(
+      '#type' => 'textarea',
+      '#title' => t('Text'),
+      '#default_value' => variable_get('toolkits_contents_block_toolkits_intro'),
+    ),
+  );
+
+  return $form;
+}
+
+/**
+ * toolkits_order_cd_block configuration
+ */
+function _toolkits_contents_block_configure_toolkits_order_cd_block() {
+  $form = array(
+    'toolkits_block_text' => array(
+      '#type' => 'text_format',
+      '#title' => t('Text'),
+      '#default_value' => variable_get('toolkits_contents_block_toolkits_order_cd'),
+      '#format' => 'full_html',
+    ),
+  );
+
+  return $form;
+}
+
+/**
+ * toolkits_subscribe configuration
+ */
+function _toolkits_contents_block_configure_toolkits_subscribe() {
+  $form = array(
+    'toolkits_block_text' => array(
+      '#type' => 'text_format',
+      '#title' => t('Text'),
+      '#default_value' => variable_get('toolkits_contents_block_toolkits_subscribe'),
+      '#format' => 'full_html',
+    ),
+  );
+
+  return $form;
+}
+
+/**
+ * toolkit_updated configuration
+ */
+function _toolkits_contents_block_configure_toolkit_updated() {
+  $form = array(
+    'toolkits_block_text' => array(
+      '#type' => 'text_format',
+      '#title' => t('Text'),
+      '#default_value' => variable_get('toolkits_contents_block_toolkit_updated'),
+      '#format' => 'full_html',
+    ),
+  );
+  
+  return $form;
+}
+
+/**
+ * toolkit_archive configuration
+ */
+function _toolkits_contents_block_configure_toolkits_archive() {
+  $default_text = '<p>Not finding what you\'re looking for? It may be in one of our older, archived Toolkits.</p>';
+  $form = array(
+    'toolkits_block_text' => array(
+      '#type' => 'text_format',
+      '#title' => t('Text'),
+      '#default_value' => variable_get('toolkits_contents_block_toolkits_archive', $default_text),
+      '#format' => 'full_html',
+    ),
+  );
+  
+  return $form;
+}
+
+/**
+ * toolkits_video configuration
+ */
+function _toolkits_contents_block_configure_toolkits_video() {
+  $default_text = '<p><iframe allowfullscreen="" frameborder="0" width="320" height="180" src="https://www.youtube.com/embed/YoZveRWf5rA"></iframe></p>';
+  $form = array(
+    'toolkits_block_text' => array(
+      '#type' => 'text_format',
+      '#title' => t('Text'),
+      '#default_value' => variable_get('toolkits_contents_block_toolkits_video', $default_text),
+      '#format' => 'full_html',
+    ),
+  );
+
+  return $form;
+}
+
+/**
+ * toolkits_admin_menu
+ */
+function _toolkits_contents_block_view_toolkits_admin_menu() {
+
+  // user must be logged in
+  global $user;
+  if (!$user->uid) {
+    return;
+  }
+
+  // load the current node
+  if (!_toolkits_contents_block_is_node_page()) {
+    return;
+  }
+
+  $node = node_load(arg(1));
+  $og_context = og_context();
+  if ($og_context) {
+    $toolkit = node_load($og_context->etid);
+  }
+
+  if ($node && empty($node->book['bid'])) {
+    $node->book['bid'] = db_query("SELECT etid FROM {og} WHERE gid = :gid", array(':gid' => $node->group_audience[$node->language][0]['gid']))->fetchField();
+  }
+
+  // dpm(var_export($node, true));
+  // dpm(var_export(isset($toolkit->nid)));
+  $resource_query_string = array('gids_node[]' => $toolkit->nid);
+  if ($node) {
+    if (isset($node->book['mlid'])) {
+      $resource_query_string['parent'] = $node->book['mlid'];
+    }
+    elseif (isset($toolkit->book['mlid'])) {
+      $resource_query_string['parent'] = $toolkit->book['mlid'];
+    }
+  }
+  elseif (!$node && isset($toolkit->book['mlid'])) {
+    $resource_query_string['parent'] = $toolkit->book['mlid'];
+  }
+
+  $links = array();
+
+  if (og_user_access($og_context->gid, 'create toolkit_page content')) {
+    $links[] = array(
+      'href' => 'node/add/toolkit-page',
+      'query' => $resource_query_string,
+      'title' => 'Add Page',
+    );
+  }
+
+  if (og_user_access($og_context->gid, 'create toolkit_resource content')) {
+    $query_string = $resource_query_string;
+    unset($query_string['parent']);
+    $links[] = array(
+      'href' => 'node/add/toolkit-resource',
+      'query' => $query_string,
+      'title' => 'Add Resource',
+    );
+  }
+
+  if (og_user_access($og_context->gid, 'update group')) {
+    $links[] = array(
+      'href' => 'admin/content/book/'. $toolkit->nid,
+      'title' => 'Manage Structure',
+      'query' => array(
+        'destination' => 'node/'. $toolkit->nid,
+      ),
+    );
+  }
+
+  if (og_user_access($og_context->gid, 'update group')) {
+    $links[] = array(
+      'title' => 'Manage Content',
+      'href' => 'all-toolkit-content/' . $og_context->gid,
+    );
+  }
+
+  if (og_user_access($og_context->gid, 'update group')) {
+    $links[] = array(
+      'href' => 'node/'. $toolkit->nid .'/group',
+      'title' => 'Collaborate',
+    );
+  }
+
+  $links[] = array(
+    'href' => 'toolkits/toolkit-application-help-guide',
+    'title' => 'Help',
+  );
+
+  $block['content'] = array(
+    'links' => array(
+      '#theme' => 'links',
+      '#attributes' => array(
+        'class' => array(
+          'toolkit-admin-menu',
+        ),
+      ),
+      '#links' => $links,
+    ),
+  );
+  return $block;
+}
+
+/**
+ * toolkits_contents_block: Table of contents
+ */
+function _toolkits_contents_block_view_toolkits_contents_block() {
+  if (!_toolkits_contents_block_is_node_page()) {
+    return;
+  }
+
+  // get the toolkit node for this page by using the page's book
+  // (if it has one)
+  $node = node_load(arg(1));
+  if ($node->type != 'toolkit' && isset($node->book)) {
+    // the node is not a toolkit, so get the book as the node
+    $node = node_load($node->book['bid']);
+  }
+  elseif ($node->type != 'toolkit' && !isset($node->book)) {
+    // this is a resource page so it does not have a book,
+    // so find the og group which should also be the book
+    $og_context = og_context();
+    $node = node_load($og_context->etid);
+  }
+
+  // create our links
+  $block['subject'] = $node->book['link_title'];
+  $block['content'] = array(
+    'list' => array(
+      '#theme' => 'links',
+      '#attributes' => array(
+        'class' => array(
+          'toolkit-links',
+        ),
+      ),
+      '#links' => array(
+        array(
+          'href' => $node->book['link_path'],
+          'title' => 'Home',
+          'attributes' => array(
+            'class' => array(
+              'toolkit-link',
+              'toolkit-icon',
+              'toolkit-link-home',
+            ),
+          ),
+        ),
+        array(
+          'href' => drupal_get_path_alias($node->book['link_path']) .'/about',
+          'title' => 'About',
+          'attributes' => array(
+            'class' => array(
+              'toolkit-link',
+              'toolkit-icon',
+              'toolkit-link-about',
+            ),
+          ),
+        ),
+        array(
+          'href' => drupal_get_path_alias($node->book['link_path']) .'/resources',
+          'title' => 'All Resources',
+          'attributes' => array(
+            'class' => array(
+              'toolkit-link',
+              'toolkit-icon',
+              'toolkit-link-resources',
+            ),
+          ),
+        )
+      ),
+    ),
+  );
+  if (_toolkits_contents_block_all_resources_empty($node)) {
+    unset($block['content']['list']['#links'][2]);
+  }
+  return $block;
+}
+
+/**
+ * toolkits_breadcrumb_block: Toolkits breadcrumb utilities
+ *
+ * Sitemap/feedback
+ */
+function _toolkits_contents_block_view_toolkits_breadcrumb_block() {
+  if (!_toolkits_contents_block_is_node_page()) {
+    return;
+  }
+
+  // get the current node
+  $node = node_load(arg(1));
+  if (!$node || empty($node->book)) {
+    return;
+  }
+
+  $path = drupal_get_path_alias('node/'. $node->book['bid']);
+
+  // check if this toolkit has a feedback form
+  $context = og_context();
+  module_load_include('inc', 'og_blocks', 'og_blocks.api');
+  $forms = og_blocks_get_group_members_by_content_type($context->gid, 'webform');
+  $context_has_feedback_form = $forms->rowCount() > 0;
+
+  $feedback = '';
+  if ($context_has_feedback_form) {
+    $feedback = '<li>'. l(
+      'Feedback',
+      $path .'/feedback',
+      array(
+        'attributes' => array(
+          'class' => array(
+            'toolkit-link',
+            'toolkit-icon',
+            'toolkit-link-feedback',
+          ),
+        ),
+      )
+    ).'</li>';
+  }
+
+  $block['content'] = array(
+    '#markup' => '<ul class="toolkit-links toolkits-links-inline">
+      <li>'. l(
+        'Toolkit Sitemap',
+        $path .'/sitemap',
+        array(
+          'attributes' => array(
+            'class' => array(
+              'toolkit-link',
+              'toolkit-icon',
+              'toolkit-link-sitemap',
+            ),
+          ),
+        )
+      ).'</li>'. $feedback .'
+      </ul>'
+  );
+  return $block;
+}
+
+/**
+ * toolkits_intro: Intro text for the toolkits landing page
+ */
+function _toolkits_contents_block_view_toolkits_intro_text() {
+  $block['content'] = array(
+    '#markup' => variable_get('toolkits_contents_block_toolkits_intro'),
+  );
+  return $block;
+}
+
+/**
+ * toolkits_intro: Intro text for the toolkits landing page
+ */
+function _toolkits_contents_block_view_toolkits_order_cd_block() {
+  $this_block = block_load('toolkits_contents_block', 'toolkits_order_cd_block');
+  if ($this_block->title) {
+    $block['subject'] = $this_block->title;
+  }
+  $block['content'] = array(
+    '#markup' => variable_get('toolkits_contents_block_toolkits_order_cd'),
+  );
+  return $block;
+}
+
+/**
+ * toolkits_print_block: Add print links to the sidebar
+ */
+function _toolkits_contents_block_view_toolkits_print_block() {
+  if (!_toolkits_contents_block_is_node_page()) {
+    return;
+  }
+
+  $node = node_load(arg(1));
+  if (!isset($node->book)) {
+    return;
+  }
+
+  // Check for a custom PDF to replace auto-generated one, or use auto-generated
+  $pdf = (isset($node->field_toolkit_pdf[$node->language][0]['filename'])) ? file_create_url($node->field_toolkit_pdf[$node->language][0]['uri']) : 'printpdf/book/export/html/'. $node->book['bid'];
+
+  $block['content'] = array(
+    '#markup' => '<ul class="toolkit-buttons no-bullets">
+      <li>'. l(
+        'Print Toolkit',
+        $pdf,
+        array(
+          'attributes' => array(
+            'class' => array(
+              'button',
+              'pill',
+              'gray',
+              'toolkit-icon',
+              'toolkit-link-toolkit-gray',
+            ),
+          ),
+        )
+      ) .'</li>
+    </ul>'
+  );
+  return $block;
+}
+
+/**
+ * toolkits_intro: Intro text for the toolkits landing page
+ */
+function _toolkits_contents_block_view_toolkits_subscribe() {
+  $this_block = block_load('toolkits_contents_block', 'toolkits_subscribe');
+  if ($this_block->title) {
+    $block['subject'] = $this_block->title;
+  }
+  $block['content'] = array(
+    '#markup' => variable_get('toolkits_contents_block_toolkits_subscribe'),
+  );
+  return $block;
+}
+
+/**
+ * toolkits_intro: Intro text for the toolkits landing page
+ */
+function _toolkits_contents_block_view_toolkits_archive() {
+  // First, make sure there are archived Toolkits to show
+  $archived_count = _toolkits_misc_show_archived();
+  if (!$archived_count || $archived_count < 1) {
+    return;
+  }
+
+  $this_block = block_load('toolkits_contents_block', 'toolkits_archive');
+  if ($this_block->title) {
+    $block['subject'] = $this_block->title;
+  } else {
+    $block['subject'] = "Archived Toolkits";
+  }
+  $default_text = '<p>Not finding what you\'re looking for? It may be in one of our older, archived Toolkits.</p>';
+  $button = '<div class="field field-name-field-product-link field-type-link-field field-label-hidden">
+  <div class="field-items action-button">
+    <div class="field-item even"><a class="button pill green" href="/toolkits/archive">View Archived Toolkits</a></div>
+  </div>
+</div>';
+  $block['content'] = array(
+    '#markup' => variable_get('toolkits_contents_block_toolkits_archive', $default_text) . $button,
+  );
+  return $block;
+}
+
+/**
+ * toolkits_video: block for the toolkits landing page
+ */
+function _toolkits_contents_block_view_toolkits_video() {
+  $this_block = block_load('toolkits_contents_block', 'toolkits_video');
+  if ($this_block->title) {
+    $block['subject'] = $this_block->title;
+  } else {
+    $block['subject'] = 'Toolkit Resources in Action!';
+  }
+  $default_text = '<p><iframe allowfullscreen="" frameborder="0" width="320" height="180" src="https://www.youtube.com/embed/YoZveRWf5rA"></iframe></p>';
+  $block['content'] = array(
+    '#markup' => variable_get('toolkits_contents_block_toolkits_video', $default_text),
+  );
+  return $block;
+}
+
+/**
+ * toolkits_intro: Intro text for the toolkits landing page
+ */
+function _toolkits_contents_block_view_toolkit_updated() {
+  $node = node_load(arg(1));
+  if ($node && $node->type != 'toolkit') {
+    return;
+  }
+  // If there is no node, we're probably on node/add, and don't have a date yet
+  if (!is_object($node)) {
+    return;
+  }
+  // Get date last updated and prepare as block content
+  $latest = _toolkits_misc_tk_last_updated($node);
+
+  $this_block = block_load('toolkits_contents_block', 'toolkit_updated');
+  if ($this_block->title) {
+    $block['subject'] = $this_block->title;
+  }
+  $block['content'] = array(
+    '#markup' => '<div id = "tk_updated">Toolkit last updated: ' . date('F d, Y', $latest) . '</div>',
+  );
+  return $block;
+}
+
+/**
+ * toolkits_resource_count: Resource count
+ */
+function _toolkits_contents_block_view_toolkits_resource_count() {
+  // get the current node
+  if (!_toolkits_contents_block_is_node_page()) {
+    return;
+  }
+
+  $node = node_load(arg(1));
+  if ($node && $node->type != 'toolkit_page') {
+    return;
+  }
+
+  // get the resources for this page
+  $query = new EntityFieldQuery();
+  $query
+    ->propertyCondition('status', 1)
+    ->entityCondition('bundle', 'toolkit_resource')
+    ->entityCondition('entity_type', 'node')
+    ->fieldCondition('field_toolkit_page', 'nid', $node->nid, '=');
+    // ->execute();
+  $resources = $query->execute();
+  $count = (!empty($resources)) ? count($resources['node']) : 0;
+
+  // hide the block if no count
+  if ($count == 0) {
+    return;
+  }
+
+  // return the count block
+  $plural = 's';
+  if ($count == 1) {
+    $plural = '';
+  }
+  $block['content'] = array(
+    '#markup' => '<a href="#block-views-toolkit-page-resources-block" class="button pill-large button-toolkit toolkit-icon toolkit-link-resources">'. $count .' Resource'. $plural .'</a>'
+  );
+  return $block;
+}
+
+/**
+ * toolkits_rss_block: RSS feeds for each toolkit
+ */
+function _toolkits_contents_block_view_toolkits_rss_block() {
+  $block['subject'] = 'Toolkit RSS Feeds';
+
+  // get the toolkits
+  $query = new EntityFieldQuery();
+  $query->propertyCondition('status', 1)
+    ->entityCondition('bundle', 'toolkit')
+    ->entityCondition('entity_type', 'node')
+    ->propertyOrderBy('title');
+  $toolkits = $query->execute();
+  $items = array();
+  foreach($toolkits['node'] as $toolkit){
+    $node = node_load($toolkit->nid);
+    $items[] = l($node->title, drupal_lookup_path('alias', 'node/'. $node->nid) .'/feed');
+  }
+
+  $block['content'] = theme('item_list', array('items' => $items));
+  return $block;
+}
+
+/**
+ * toolkits_by_country block: Provides link list of Countries tagged in Toolkits
+ */
+function _toolkits_contents_block_view_toolkits_by_country() {
+  $block['subject'] = 'Toolkits by Country';
+
+  // get the list of countries Toolkits are tagged with
+  $countries = array();
+  $items = array();
+  $items[] = l('All Countries', '/toolkits/countries/all');
+  $result = db_query("SELECT DISTINCT(td.tid), td.name FROM {field_data_field_country} fd INNER JOIN {node} n ON fd.entity_id = n.nid INNER JOIN {taxonomy_term_data} td ON fd.field_country_tid = td.tid WHERE n.type = 'toolkit'");
+  foreach ($result as $record) {
+//    $countries[$record->tid] = $record->name;
+    $items[] = l($record->name, '/toolkits/countries/' . $record->tid);
+  }
+
+  $block['content'] = theme('item_list', array('items' => $items));
+  return $block;
+}
+
+function _toolkits_misc_show_archived() {
+  $count = db_query("SELECT COUNT(*) FROM {field_data_field_toolkit_category} WHERE field_toolkit_category_value = 'archived'")->fetchField();
+  return $count;
+}
+
+/**
+ * Helper function checks if all resources would be empty so it can be removed from the toolkits contents block.
+ */
+function _toolkits_contents_block_all_resources_empty($node) {
+  // get gid to check resources for
+  $gid = db_query("SELECT gid FROM {og} WHERE etid = :nid", array(':nid' => $node->nid))->fetchField();
+
+  // get the resources for the toolkit
+  module_load_include('inc', 'og_blocks', 'og_blocks.api');
+
+  $resources = og_blocks_get_group_members_by_content_type($gid, 'toolkit_resource');
+  // In case there are no resources, return a message to avoid a blank screen
+  if ($resources->rowCount() === 0) {
+    return TRUE;
+  }
+  return FALSE;
+}

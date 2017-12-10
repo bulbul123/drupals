@@ -1,0 +1,6 @@
+name = OG Blocks
+description = Set of blocks for working with OG
+package = Toolkits
+core = 7.x
+dependencies[] = og
+dependencies[] = og_context
